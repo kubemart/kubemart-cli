@@ -16,29 +16,111 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 
+	operator "github.com/civo/bizaar-operator/api/v1alpha1"
+	utils "github.com/civo/bizaar/pkg/utils"
+	"github.com/forestgiant/sliceutil"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// Plan is used for selected apps i.e. mariadb
+var Plan int
 
 // installCmd represents the install command
 var installCmd = &cobra.Command{
-	Use:   "install",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Use:   "install APP_NAME",
+	Short: "Install an application",
+	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("install called")
+		appName := args[0]
+		if appName == "" {
+			fmt.Println("Please provide an app name")
+			os.Exit(1)
+		}
+		utils.DebugPrintf("App name to install: %s\n", appName)
+
+		appPlans, err := utils.GetAppPlans(appName)
+		if err != nil {
+			fmt.Printf("Unable to list app's plans - %v\n", err)
+			os.Exit(1)
+		}
+
+		if len(appPlans) > 0 {
+			if Plan == 0 {
+				smallestPlan := utils.GetSmallestAppPlan(appPlans)
+				if smallestPlan > 0 {
+					Plan = smallestPlan
+					fmt.Println("This app require a plan. Next time you could use --plan or -p flag.")
+					fmt.Printf("Since the flag is not present, this installation will proceed with the smallest one (%dGB)\n", Plan)
+				}
+			}
+
+			if Plan > 0 {
+				if !sliceutil.Contains(appPlans, Plan) {
+					fmt.Printf("The given plan is not supported for this app. Supported values are %v.\n", appPlans)
+					os.Exit(1)
+				}
+			}
+
+			utils.DebugPrintf("Plan to proceed with: %d\n", Plan)
+		}
+
+		app := &operator.App{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "app.bizaar.civo.com/v1alpha1",
+				Kind:       "App",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      appName,
+				Namespace: "default",
+			},
+			Spec: operator.AppSpec{
+				Name:         appName,
+				TargetStatus: "installed",
+				Plan:         Plan,
+			},
+		}
+
+		clientset, err := utils.GetKubeClientSet()
+		if err != nil {
+			fmt.Printf("Unable to create k8s clientset - %v", err)
+			os.Exit(1)
+		}
+
+		body, err := json.Marshal(app)
+		if err != nil {
+			fmt.Printf("Unable to marshall app's manifest - %v", err)
+			os.Exit(1)
+		}
+
+		// TODO - use bizaar-operator Go client
+		wasCreated := false
+		res := clientset.RESTClient().
+			Post().
+			AbsPath("/apis/app.bizaar.civo.com/v1alpha1/namespaces/default/apps").
+			Body(body).
+			Do(context.Background())
+
+		res = res.WasCreated(&wasCreated)
+		if wasCreated {
+			fmt.Println("App created successfully")
+			utils.RenderPostInstallMarkdown(appName)
+			os.Exit(0)
+		} else {
+			fmt.Printf("App creation failed - %+v\n", res.Error())
+			os.Exit(1)
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(installCmd)
-
+	installCmd.Flags().IntVarP(&Plan, "plan", "p", 0, "Storage plan for the app (in GB) e.g. '5' for 5GB")
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
