@@ -106,7 +106,7 @@ var initCmd = &cobra.Command{
 			}
 		}
 
-		namespaceExists, err := utils.IsBizaarNamespaceExist()
+		namespaceExists, err := utils.IsNamespaceExist("bizaar")
 		if err != nil {
 			fmt.Printf("Unable to check namespace - %v\n", err.Error())
 			os.Exit(1)

@@ -33,6 +33,7 @@ const (
 
 // AppManifest is used when parsing remote app manifest.yaml
 type AppManifest struct {
+	Namespace    string   `yaml:"namespace"`
 	Dependencies []string `yaml:"dependencies"`
 	Plans        []struct {
 		Label         string `yaml:"label"`
@@ -77,6 +78,29 @@ func GetBizaarPaths() (*BizaarPaths, error) {
 	bp.ConfigFilePath = fmt.Sprintf("%s/config.json", bizaarDirPath)
 
 	return bp, nil
+}
+
+// GetAppNamespace ...
+func GetAppNamespace(appName string) (string, error) {
+	bp, err := GetBizaarPaths()
+	if err != nil {
+		return "", err
+	}
+
+	appManifestPath := fmt.Sprintf("%s/%s/manifest.yaml", bp.AppsDirectoryPath, appName)
+	file, err := ioutil.ReadFile(appManifestPath)
+	if err != nil {
+		return "", err
+	}
+
+	manifest := AppManifest{}
+	err = yaml.Unmarshal(file, &manifest)
+	if err != nil {
+		return "", err
+	}
+
+	ns := manifest.Namespace
+	return ns, nil
 }
 
 // GetAppDependencies will fetch app's dependencies and return in slice type
@@ -232,9 +256,8 @@ func CreateBizaarConfigMap(bcm *BizaarConfigMap) error {
 	return nil
 }
 
-// IsBizaarNamespaceExist returns true if "bizaar" Namespace is found
-func IsBizaarNamespaceExist() (bool, error) {
-	namespace := "bizaar"
+// IsNamespaceExist returns true if Namespace is found
+func IsNamespaceExist(namespace string) (bool, error) {
 	clientset, err := GetKubeClientSet()
 	if err != nil {
 		return false, err
@@ -277,6 +300,18 @@ func CreateBizaarNamespace() error {
 	}
 
 	return nil
+}
+
+// DeleteNamespace ...
+func DeleteNamespace(namespace string) error {
+	clientset, err := GetKubeClientSet()
+	if err != nil {
+		return err
+	}
+
+	nsClient := clientset.CoreV1().Namespaces()
+	err = nsClient.Delete(context.Background(), namespace, metav1.DeleteOptions{})
+	return err
 }
 
 // RenderPostInstallMarkdown will fetch app's post_install.md and render to user's stdout

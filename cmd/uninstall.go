@@ -16,17 +16,131 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"time"
 
+	operator "github.com/civo/bizaar-operator/api/v1alpha1"
+	utils "github.com/civo/bizaar/pkg/utils"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // uninstallCmd represents the uninstall command
 var uninstallCmd = &cobra.Command{
 	Use:   "uninstall",
 	Short: "Uninstall an application",
+	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("uninstall called")
+		appName := args[0]
+		if appName == "" {
+			fmt.Println("Please provide an app name")
+			os.Exit(1)
+		}
+		utils.DebugPrintf("App name to uninstall: %s\n", appName)
+
+		clientset, err := utils.GetKubeClientSet()
+		if err != nil {
+			fmt.Printf("Unable to create k8s clientset - %v", err)
+			os.Exit(1)
+		}
+
+		app := &operator.App{}
+		path := fmt.Sprintf("/apis/app.bizaar.civo.com/v1alpha1/namespaces/default/apps/%s", appName)
+		clientset.RESTClient().
+			Get().
+			AbsPath(path).
+			Do(context.Background()).
+			Into(app)
+
+		if app.Status.LastStatus != "installation_finished" {
+			fmt.Printf("Unable to delete %s app. This can be due to few factors such as:\n", appName)
+			fmt.Printf("* There is no such %s app in the marketplace\n", appName)
+			fmt.Printf("* You don't have %s app installed in this cluster\n", appName)
+			fmt.Printf("* The %s app is still in create or update phase\n", appName)
+			os.Exit(1)
+		}
+
+		namespace, err := utils.GetAppNamespace(appName)
+		if err != nil {
+			fmt.Printf("Unable to determine app namespace from app's manifest.yaml file - %v\n", err)
+			os.Exit(1)
+		}
+
+		if namespace == "" {
+			fmt.Println("Unable to uninstall this app because it does not have namespace declared in its manifest.yaml file")
+			os.Exit(1)
+		}
+
+		namespaceExists, err := utils.IsNamespaceExist(namespace)
+		if err != nil {
+			fmt.Printf("Unable to check namespace - %v\n", err.Error())
+			os.Exit(1)
+		}
+
+		if namespaceExists {
+			fmt.Printf("Deleting %s namespace for %s app...\n", namespace, appName)
+			err = utils.DeleteNamespace(namespace)
+			if err != nil {
+				fmt.Printf("Unable to delete namespace - %v\n", err.Error())
+				os.Exit(1)
+			}
+		}
+
+		fmt.Printf("Waiting for %s namespace deletion to finish...\n", namespace)
+		var sleepDuration time.Duration = 5 // seconds
+		var maxTries int = 60
+		var tries int = 0
+		var handleFinalizer bool = false
+
+		for {
+			if tries > maxTries {
+				handleFinalizer = true
+				break
+			}
+
+			nsExists, err := utils.IsNamespaceExist(namespace)
+			if err != nil {
+				fmt.Printf("Unable to check namespace - %v\n", err.Error())
+				os.Exit(1)
+			}
+
+			if !nsExists {
+				break
+			}
+
+			time.Sleep(sleepDuration * time.Second)
+			tries++
+		}
+
+		if handleFinalizer {
+			fmt.Println("Clearing namespace finalizer...")
+			app.ObjectMeta.Finalizers = []string{}
+			updateFinalizerRes := clientset.RESTClient().
+				Patch(types.JSONPatchType).
+				AbsPath(path).
+				Body(app).
+				Do(context.Background())
+			if updateFinalizerRes.Error() != nil {
+				fmt.Printf("Unable to clear %s namespace finalizers - %v\n", namespace, updateFinalizerRes.Error())
+				os.Exit(1)
+			}
+		}
+
+		fmt.Printf("Deleting %s app...\n", appName)
+		deleteRes := clientset.RESTClient().
+			Delete().
+			AbsPath(path).
+			Do(context.Background())
+
+		if deleteRes.Error() != nil {
+			fmt.Printf("Unable to delete %s app - %v\n", appName, deleteRes.Error())
+			os.Exit(1)
+		}
+
+		fmt.Printf("%s app (was running in %s namespace) successfully deleted\n", appName, namespace)
+		os.Exit(0)
 	},
 }
 
