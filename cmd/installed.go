@@ -62,11 +62,22 @@ var installedCmd = &cobra.Command{
 			}
 
 			w := tabwriter.NewWriter(os.Stdout, 15, 0, 1, ' ', tabwriter.TabIndent)
-			fmt.Fprintln(w, "NAME\tVERSION\tCURRENT STATUS")
+			fmt.Fprintln(w, "NAME\tCURRENT STATUS\tVERSION\tUPDATE AVAILABLE")
 			for _, app := range apps.Items {
-				version := fmt.Sprintf("\t%s", app.Status.InstalledVersion)
 				currentStatus := fmt.Sprintf("\t%s", app.Status.LastStatus)
-				fmt.Fprintln(w, app.Name, version, currentStatus)
+				version := fmt.Sprintf("\t%s", app.Status.InstalledVersion)
+
+				updateAvailable := ""
+				if app.Status.InstalledVersion != "" {
+					if app.Status.NewUpdateAvailable {
+						updateAvailable = fmt.Sprintf("yes (%s)", app.Status.NewUpdateVersion)
+					} else {
+						updateAvailable = "no"
+					}
+				}
+				newUpdate := fmt.Sprintf("\t%s", updateAvailable)
+
+				fmt.Fprintln(w, app.Name, currentStatus, version, newUpdate)
 			}
 			w.Flush()
 			os.Exit(0)

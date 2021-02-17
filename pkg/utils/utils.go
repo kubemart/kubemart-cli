@@ -31,7 +31,7 @@ const (
 	marketplaceBranch  = "b"
 )
 
-// AppManifest is used when parsing remote app manifest.yaml
+// AppManifest is used when parsing app manifest.yaml from ~/.bizaar/apps folder
 type AppManifest struct {
 	Namespace    string   `yaml:"namespace"`
 	Dependencies []string `yaml:"dependencies"`
