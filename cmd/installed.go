@@ -41,7 +41,7 @@ var installedCmd = &cobra.Command{
 		statusCode := 0
 		res := clientset.RESTClient().
 			Get().
-			AbsPath("/apis/app.bizaar.civo.com/v1alpha1").
+			AbsPath("/apis/bizaar.civo.com/v1alpha1").
 			Namespace("default").
 			Resource("apps").
 			Do(context.Background())

@@ -72,7 +72,7 @@ var installCmd = &cobra.Command{
 
 		app := &operator.App{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "app.bizaar.civo.com/v1alpha1",
+				APIVersion: "bizaar.civo.com/v1alpha1",
 				Kind:       "App",
 			},
 			ObjectMeta: metav1.ObjectMeta{
@@ -102,7 +102,7 @@ var installCmd = &cobra.Command{
 		wasCreated := false
 		res := clientset.RESTClient().
 			Post().
-			AbsPath("/apis/app.bizaar.civo.com/v1alpha1/namespaces/default/apps").
+			AbsPath("/apis/bizaar.civo.com/v1alpha1/namespaces/default/apps").
 			Body(body).
 			Do(context.Background())
 
