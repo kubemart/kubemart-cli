@@ -62,11 +62,11 @@ var installedCmd = &cobra.Command{
 			}
 
 			w := tabwriter.NewWriter(os.Stdout, 15, 0, 1, ' ', tabwriter.TabIndent)
-			fmt.Fprintln(w, "NAME\tVERSION\tSTATUS")
+			fmt.Fprintln(w, "NAME\tVERSION\tCURRENT STATUS")
 			for _, app := range apps.Items {
 				version := fmt.Sprintf("\t%s", "todo")
-				status := fmt.Sprintf("\t%s", app.Status.LastStatus)
-				fmt.Fprintln(w, app.Name, version, status)
+				currentStatus := fmt.Sprintf("\t%s", app.Status.LastStatus)
+				fmt.Fprintln(w, app.Name, version, currentStatus)
 			}
 			w.Flush()
 			os.Exit(0)

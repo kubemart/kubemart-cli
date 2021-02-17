@@ -80,9 +80,9 @@ var installCmd = &cobra.Command{
 				Namespace: "default",
 			},
 			Spec: operator.AppSpec{
-				Name:         appName,
-				TargetStatus: "installed",
-				Plan:         Plan,
+				Name:   appName,
+				Action: "install",
+				Plan:   Plan,
 			},
 		}
 
