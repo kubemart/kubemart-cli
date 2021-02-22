@@ -20,10 +20,12 @@ import (
 	"github.com/civo/bizaar/pkg/utils"
 	"github.com/spf13/cobra"
 	"io/ioutil"
+	"os"
 	"strings"
-	_ "strings"
-	"log"
 )
+
+// to store all folder names that we don't want e.g. "bin"
+var excludeList map[string]bool
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
@@ -31,20 +33,53 @@ var listCmd = &cobra.Command{
 	Short: "List all the apps that can be installed",
 	Long: `This command will display the list of all the applications that can be installed onto the Kubernetes cluster`,
 	Run: func(cmd *cobra.Command, args []string) {
-		dir, _  := utils.GetBizaarPaths()
+		excludeList = make(map[string]bool)
+		excludeList["bin"] = true
+		dir, _ := utils.GetBizaarPaths()
 		path := dir.AppsDirectoryPath
 		files, err := ioutil.ReadDir(path)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Print("Unable parse get list of files - %v", err)
+			os.Exit(1)
 		}
+		apps := []string{}
 		for _, file := range files {
-			if strings.Contains(file.Name(),".") || file.Name()=="bin" || file.Name()=="Gemfile"{
-				continue;
+			fileName := file.Name()
+			filePath := fmt.Sprintf("%s/%s", path, fileName)
+			fileInfo, err := os.Stat(filePath)
+			if err != nil {
+				fmt.Print("Unable to locate file - %v", err)
+				os.Exit(1)
 			}
-			fmt.Println(file.Name())
+			if fileInfo.IsDir() && isValid(fileName) {
+				apps = append(apps, fileName)
+			}
 		}
+		fmt.Println(strings.Join(apps, "\n"))
 	},
 }
+func isValid(folderName string) bool {
+	isHidden := isHidden(folderName)
+	if isHidden {
+		return false
+	}
+
+	isNotAllowed, ok := excludeList[folderName]
+	if ok && isNotAllowed {
+		return false
+	}
+
+	return true
+}
+
+func isHidden(folderName string) bool {
+	firstCharacter := folderName[0:1]
+	if firstCharacter == "." {
+		return true
+	}
+	return false
+}
+
 
 func init() {
 	rootCmd.AddCommand(listCmd)
@@ -59,3 +94,4 @@ func init() {
 	// is called directly, e.g.:
 	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
+
