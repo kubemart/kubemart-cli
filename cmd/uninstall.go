@@ -39,7 +39,7 @@ var uninstallCmd = &cobra.Command{
 
 		clientset, err := utils.GetKubeClientSet()
 		if err != nil {
-			fmt.Printf("Unable to create k8s clientset - %v", err)
+			fmt.Printf("Unable to create k8s clientset - %v\n", err)
 			os.Exit(1)
 		}
 

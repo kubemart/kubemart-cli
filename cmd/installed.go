@@ -33,7 +33,7 @@ var installedCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		clientset, err := utils.GetKubeClientSet()
 		if err != nil {
-			fmt.Printf("Unable to create k8s clientset - %v", err)
+			fmt.Printf("Unable to create k8s clientset - %v\n", err)
 			os.Exit(1)
 		}
 
@@ -52,7 +52,7 @@ var installedCmd = &cobra.Command{
 		if statusCode == 200 {
 			err = res.Into(apps)
 			if err != nil {
-				fmt.Printf("Unable parse app list - %v", err)
+				fmt.Printf("Unable parse app list - %v\n", err)
 				os.Exit(1)
 			}
 

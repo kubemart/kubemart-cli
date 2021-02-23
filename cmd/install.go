@@ -88,13 +88,13 @@ var installCmd = &cobra.Command{
 
 		clientset, err := utils.GetKubeClientSet()
 		if err != nil {
-			fmt.Printf("Unable to create k8s clientset - %v", err)
+			fmt.Printf("Unable to create k8s clientset - %v\n", err)
 			os.Exit(1)
 		}
 
 		body, err := json.Marshal(app)
 		if err != nil {
-			fmt.Printf("Unable to marshall app's manifest - %v", err)
+			fmt.Printf("Unable to marshall app's manifest - %v\n", err)
 			os.Exit(1)
 		}
 
