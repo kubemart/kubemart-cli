@@ -14,6 +14,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"path"
+	"path/filepath"
+	"runtime"
 
 	"github.com/charmbracelet/glamour"
 	"gopkg.in/yaml.v2"
@@ -72,10 +75,15 @@ func GetBizaarPaths() (*BizaarPaths, error) {
 		return bp, err
 	}
 
-	bizaarDirPath := fmt.Sprintf("%s/.bizaar", homeDir)
+	// bizaarDirPath := fmt.Sprintf("%s/.bizaar", homeDir)
+	// bp.RootDirectoryPath = bizaarDirPath
+	// bp.AppsDirectoryPath = fmt.Sprintf("%s/apps", bizaarDirPath)
+	// bp.ConfigFilePath = fmt.Sprintf("%s/config.json", bizaarDirPath)
+
+	bizaarDirPath := filepath.Join(homeDir, ".bizaar")
 	bp.RootDirectoryPath = bizaarDirPath
-	bp.AppsDirectoryPath = fmt.Sprintf("%s/apps", bizaarDirPath)
-	bp.ConfigFilePath = fmt.Sprintf("%s/config.json", bizaarDirPath)
+	bp.AppsDirectoryPath = filepath.Join(bizaarDirPath, "apps")
+	bp.ConfigFilePath = filepath.Join(bizaarDirPath, "config.json")
 
 	return bp, nil
 }
@@ -322,18 +330,23 @@ func RenderPostInstallMarkdown(appName string) {
 		os.Exit(1)
 	}
 
-	appManifestPath := fmt.Sprintf("%s/%s/post_install.md", bp.AppsDirectoryPath, appName)
+	appManifestPath := filepath.Join(bp.AppsDirectoryPath, appName, "post_install.md")
+	DebugPrintf("App post install file - %s\n", appManifestPath)
 	file, err := ioutil.ReadFile(appManifestPath)
 	if err != nil {
 		fmt.Printf("Unable to load post-install notes for this app - %v\n", err.Error())
 		os.Exit(1)
 	}
 
-	out, err := glamour.Render(string(file), "dark")
-	if err == nil {
-		fmt.Println("App post-install notes:")
-		fmt.Println(out)
-	}
+	if runtime.GOOS == "windows" {
+        fmt.Println(string(file))
+  } else {
+		out, err := glamour.Render(string(file), "dark")
+		if err == nil {
+			fmt.Println("App post-install notes:")
+			fmt.Println(out)
+		}
+  }
 }
 
 // DebugPrintf is used to print debug messages (useful during development)
@@ -359,8 +372,21 @@ func IsCommandAvailable(name string) bool {
 func GitClone(directory string) (string, error) {
 	var stdErrBuf bytes.Buffer
 	url := fmt.Sprintf("https://github.com/%s/kubernetes-marketplace.git", marketplaceAccount)
-	cmdToRun := fmt.Sprintf("git clone --branch %s --progress %s %s", marketplaceBranch, url, directory)
-	cmd := exec.Command("/bin/sh", "-c", cmdToRun)
+
+	// cmdToRun := fmt.Sprintf(`git clone --branch %s --progress %s %s`, marketplaceBranch, url, path.Clean(directory))
+	// DebugPrintf("cmdToRun - %s\n", cmdToRun)
+
+	args := []string{
+		"clone",
+		"--branch",
+		marketplaceBranch,
+		"--progress",
+		url,
+		path.Clean(directory),
+	}
+	DebugPrintf("git command args - %v\n", args)
+
+	cmd := exec.Command("git", args...)
 	cmd.Stderr = &stdErrBuf // because `git clone` use stderr
 	err := cmd.Run()
 	if err != nil {
@@ -373,8 +399,17 @@ func GitClone(directory string) (string, error) {
 
 // GitPull will run `git pull` in the context of given directory
 func GitPull(directory string) (string, error) {
-	cmdToRun := fmt.Sprintf("git -C %s pull origin %s", directory, marketplaceBranch)
-	out, err := exec.Command("/bin/sh", "-c", cmdToRun).Output()
+	// cmdToRun := fmt.Sprintf("git -C %s pull origin %s", path.Clean(directory), marketplaceBranch)
+	args := []string{
+		"-C",
+		path.Clean(directory),
+		"pull",
+		"origin",
+		marketplaceBranch,
+	}
+	DebugPrintf("git command args - %v\n", args)
+
+	out, err := exec.Command("git", args...).Output()
 	if err != nil {
 		return "", err
 	}
@@ -461,8 +496,17 @@ func UpdateAppsCacheIfStale() {
 
 // GitLatestCommitHash will return the last commit (short version) from Git folder
 func GitLatestCommitHash(directory string) (string, error) {
-	cmdToRun := fmt.Sprintf("git -C %s rev-parse --short HEAD", directory)
-	out, err := exec.Command("/bin/sh", "-c", cmdToRun).Output()
+	// cmdToRun := fmt.Sprintf("git -C %s rev-parse --short HEAD", directory)
+	args := []string{
+		"-C",
+		path.Clean(directory),
+		"rev-parse",
+		"--short",
+		"HEAD",
+	}
+	DebugPrintf("git command args - %v\n", args)
+
+	out, err := exec.Command("git", args...).Output()
 	if err != nil {
 		return "", err
 	}
