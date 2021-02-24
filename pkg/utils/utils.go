@@ -8,15 +8,15 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"reflect"
 	"regexp"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-	"path"
-	"path/filepath"
-	"runtime"
 
 	"github.com/charmbracelet/glamour"
 	"gopkg.in/yaml.v2"
@@ -74,11 +74,6 @@ func GetBizaarPaths() (*BizaarPaths, error) {
 	if err != nil {
 		return bp, err
 	}
-
-	// bizaarDirPath := fmt.Sprintf("%s/.bizaar", homeDir)
-	// bp.RootDirectoryPath = bizaarDirPath
-	// bp.AppsDirectoryPath = fmt.Sprintf("%s/apps", bizaarDirPath)
-	// bp.ConfigFilePath = fmt.Sprintf("%s/config.json", bizaarDirPath)
 
 	bizaarDirPath := filepath.Join(homeDir, ".bizaar")
 	bp.RootDirectoryPath = bizaarDirPath
@@ -339,14 +334,14 @@ func RenderPostInstallMarkdown(appName string) {
 	}
 
 	if runtime.GOOS == "windows" {
-        fmt.Println(string(file))
-  } else {
+		fmt.Println(string(file))
+	} else {
 		out, err := glamour.Render(string(file), "dark")
 		if err == nil {
 			fmt.Println("App post-install notes:")
 			fmt.Println(out)
 		}
-  }
+	}
 }
 
 // DebugPrintf is used to print debug messages (useful during development)
@@ -373,9 +368,6 @@ func GitClone(directory string) (string, error) {
 	var stdErrBuf bytes.Buffer
 	url := fmt.Sprintf("https://github.com/%s/kubernetes-marketplace.git", marketplaceAccount)
 
-	// cmdToRun := fmt.Sprintf(`git clone --branch %s --progress %s %s`, marketplaceBranch, url, path.Clean(directory))
-	// DebugPrintf("cmdToRun - %s\n", cmdToRun)
-
 	args := []string{
 		"clone",
 		"--branch",
@@ -399,7 +391,6 @@ func GitClone(directory string) (string, error) {
 
 // GitPull will run `git pull` in the context of given directory
 func GitPull(directory string) (string, error) {
-	// cmdToRun := fmt.Sprintf("git -C %s pull origin %s", path.Clean(directory), marketplaceBranch)
 	args := []string{
 		"-C",
 		path.Clean(directory),
@@ -496,7 +487,6 @@ func UpdateAppsCacheIfStale() {
 
 // GitLatestCommitHash will return the last commit (short version) from Git folder
 func GitLatestCommitHash(directory string) (string, error) {
-	// cmdToRun := fmt.Sprintf("git -C %s rev-parse --short HEAD", directory)
 	args := []string{
 		"-C",
 		path.Clean(directory),
@@ -634,23 +624,3 @@ func GetMasterIP() (string, error) {
 	serverURL := restConfig.Host
 	return ExtractIPAddressFromURL(serverURL)
 }
-
-// --------------------------------------------------------
-// Not used
-// --------------------------------------------------------
-
-// GetKubeClientSetFromRESTConfig takes k8s REST config and returns k8s clientset
-// func GetKubeClientSetFromRESTConfig(restConfig *rest.Config) (*kubernetes.Clientset, error) {
-// 	clientset := &kubernetes.Clientset{}
-// 	cs, err := kubernetes.NewForConfig(restConfig)
-// 	if err != nil {
-// 		return clientset, err
-// 	}
-// 	return cs, nil
-// }
-
-// KubeconfigGetter implements clientcmd#KubeconfigGetter
-// https://pkg.go.dev/k8s.io/client-go/tools/clientcmd#KubeconfigGetter
-// func KubeconfigGetter() (*api.Config, error) {
-// 	return clientcmd.NewDefaultClientConfigLoadingRules().Load()
-// }
