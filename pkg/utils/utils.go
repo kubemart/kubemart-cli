@@ -348,12 +348,11 @@ func DebugPrintf(format string, a ...interface{}) (n int, err error) {
 
 // IsCommandAvailable returns true if a program is installed
 func IsCommandAvailable(name string) bool {
-	cmdToRun := fmt.Sprintf("command -v %s", name)
-	cmd := exec.Command("/bin/sh", "-c", cmdToRun)
-	if err := cmd.Run(); err != nil {
-		return false
+	_, err := exec.LookPath(name)
+	if err == nil {
+		return true
 	}
-	return true
+	return false
 }
 
 // GitClone will run `git clone` and save the contents into directory
