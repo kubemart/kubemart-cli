@@ -19,6 +19,11 @@ jobs:
         with:
           go-version: 1.16.x
 
+      - name: Set up Go Modules
+        env:
+          GOPRIVATE: github.com/civo/bizaar-operator
+        run: git config --global url."https://${{ secrets.GH_USERNAME }}:${{ secrets.GH_TOKEN }}@github.com".insteadOf "https://github.com"
+
       - name: Build and release
         uses: goreleaser/goreleaser-action@v2
         with:
