@@ -1,0 +1,69 @@
+project_name: bizaar
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - 386
+      - amd64
+      - arm
+      - arm64
+    ignore:
+      - goos: darwin
+        goarch: 386
+      - goos: windows
+        goarch: 386
+    # TODO
+    # ldflags:
+    #   - -s -w -X github.com/civo/cli/cmd.VersionCli={{.Version}} -X github.com/civo/cli/cmd.CommitCli={{.Commit}} -X github.com/civo/cli/cmd.DateCli={{.Date}}
+checksum:
+  name_template: "{{ .ProjectName }}-{{ .Version }}-checksums.sha256"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - Merge pull request
+      - Merge branch
+archives:
+  - name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+# TODO
+# brews:
+#   - name: civo
+#     tap:
+#       owner: civo
+#       name: homebrew-tools
+#     commit_author:
+#       name: civobot
+#       email: hello@civo.com
+#     folder: Formula
+#     homepage: "https://github.com/civo/cli"
+#     description: "CLI for managing Civo resources."
+# TODO
+# dockers:
+#   - goos: linux
+#     goarch: amd64
+#     ids:
+#       - civo
+#     image_templates:
+#       - "civo/cli:latest"
+#       - "civo/cli:{{ .Tag }}"
+#     dockerfile: docker/Dockerfile
+# TODO
+# nfpms:
+#   - file_name_template: "{{ .ProjectName }}_{{ .Arch }}"
+#     homepage: https://github.com/civo/cli
+#     description: Our Command Line Interface (CLI) for interacting with your Civo resources
+#     maintainer: Alejandro J. Nuñez Madrazo <alejandro@civo.com>
+#     license: MIT
+#     vendor: Civo
+#     formats:
+#       - deb
+#       - rpm
