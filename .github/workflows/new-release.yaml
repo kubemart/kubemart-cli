@@ -24,7 +24,7 @@ jobs:
           GOPRIVATE: github.com/civo/bizaar-operator
         run: |
           git config --global url."https://${{ secrets.GH_USERNAME }}:${{ secrets.GH_TOKEN }}@github.com".insteadOf "https://github.com"
-          go get github.com/googleapis/gnostic/OpenAPIv2
+          go get github.com/googleapis/gnostic@v0.4.0
 
       - name: Build and release
         uses: goreleaser/goreleaser-action@v2
