@@ -24,6 +24,7 @@ import (
 )
 
 var kubeCfgFile string
+var canSkipUpdateApps map[string]bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -32,7 +33,12 @@ var rootCmd = &cobra.Command{
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		if cmd.Name() != "init" {
+		canSkipUpdateApps = make(map[string]bool)
+		canSkipUpdateApps["init"] = true
+		canSkipUpdateApps["version"] = true
+
+		_, found := canSkipUpdateApps[cmd.Name()]
+		if !found {
 			utils.UpdateAppsCacheIfStale()
 		}
 	},
