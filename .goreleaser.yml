@@ -56,14 +56,12 @@ archives:
 #       - "civo/cli:latest"
 #       - "civo/cli:{{ .Tag }}"
 #     dockerfile: docker/Dockerfile
-# TODO
-# nfpms:
-#   - file_name_template: "{{ .ProjectName }}_{{ .Arch }}"
-#     homepage: https://github.com/civo/cli
-#     description: Our Command Line Interface (CLI) for interacting with your Civo resources
-#     maintainer: Alejandro J. Nuñez Madrazo <alejandro@civo.com>
-#     license: MIT
-#     vendor: Civo
-#     formats:
-#       - deb
-#       - rpm
+nfpms:
+  - file_name_template: "{{ .ProjectName }}_{{ .Arch }}"
+    homepage: https://github.com/civo/bizaar-cli
+    description: A Command Line Interface (CLI) for interacting with your Bizaar apps
+    license: MIT
+    vendor: Civo
+    formats:
+      - deb
+      - rpm
