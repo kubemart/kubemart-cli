@@ -16,9 +16,8 @@ builds:
         goarch: 386
       - goos: windows
         goarch: 386
-    # TODO
-    # ldflags:
-    #   - -s -w -X github.com/civo/cli/cmd.VersionCli={{.Version}} -X github.com/civo/cli/cmd.CommitCli={{.Commit}} -X github.com/civo/cli/cmd.DateCli={{.Date}}
+    ldflags:
+      - -s -w -X github.com/civo/bizaar/cmd.VersionCli={{.Version}} -X github.com/civo/bizaar/cmd.CommitCli={{.Commit}} -X github.com/civo/bizaar/cmd.DateCli={{.Date}}
 checksum:
   name_template: "{{ .ProjectName }}-{{ .Version }}-checksums.sha256"
 changelog:
@@ -44,7 +43,7 @@ archives:
 #       name: civobot
 #       email: hello@civo.com
 #     folder: Formula
-#     homepage: "https://github.com/civo/cli"
+#     homepage: "https://github.com/civo/bizaar"
 #     description: "CLI for managing Civo resources."
 # TODO
 # dockers:
