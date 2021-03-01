@@ -33,18 +33,17 @@ archives:
     format_overrides:
       - goos: windows
         format: zip
-# TODO
-# brews:
-#   - name: civo
-#     tap:
-#       owner: civo
-#       name: homebrew-tools
-#     commit_author:
-#       name: civobot
-#       email: hello@civo.com
-#     folder: Formula
-#     homepage: "https://github.com/civo/bizaar"
-#     description: "CLI for managing Civo resources."
+brews:
+  - name: bizaar
+    tap:
+      owner: civo
+      name: homebrew-tools
+    commit_author:
+      name: civobot
+      email: hello@civo.com
+    folder: Formula
+    homepage: "https://github.com/civo/bizaar-cli"
+    description: "CLI for interacting with your Bizaar apps"
 # TODO
 # dockers:
 #   - goos: linux
@@ -58,6 +57,7 @@ archives:
 nfpms:
   - file_name_template: "{{ .ProjectName }}_{{ .Arch }}"
     homepage: https://github.com/civo/bizaar-cli
+    maintainer: Civo <hello@civo.com>
     description: A Command Line Interface (CLI) for interacting with your Bizaar apps
     license: MIT
     vendor: Civo
