@@ -25,6 +25,16 @@ jobs:
         run: |
           git config --global url."https://${{ secrets.GH_USERNAME }}:${{ secrets.GH_TOKEN }}@github.com".insteadOf "https://github.com"
 
+      # TODO - change this after we go live
+      - name: Download bizaar-operator manifest
+        uses: dsaltares/fetch-gh-release-asset@0.0.5
+        with:
+          repo: "civo/bizaar-operator"
+          version: "latest"
+          file: "bizaar-operator.yaml"
+          target: "cmd/manifests/bizaar-operator.yaml"
+          token: ${{ secrets.GH_TOKEN }}
+
       - name: Build and release
         uses: goreleaser/goreleaser-action@v2
         with:

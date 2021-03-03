@@ -375,3 +375,13 @@ func TestGetAppDependencies2(t *testing.T) {
 	deps, _ := GetAppDependencies("minio")
 	fmt.Println(deps)
 }
+
+func TestGetKubeServerVersionHuman(t *testing.T) {
+	version, _ := GetKubeServerVersionHuman()
+	fmt.Printf("Human version: %s\n", version)
+}
+
+func TestGetKubeServerVersionCombined(t *testing.T) {
+	combined, _ := GetKubeServerVersionCombined()
+	fmt.Printf("Combined version: %d\n", combined)
+}

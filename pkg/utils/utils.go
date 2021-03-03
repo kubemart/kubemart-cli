@@ -21,10 +21,20 @@ import (
 	"github.com/charmbracelet/glamour"
 	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
+	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	k8syaml "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/discovery"
+	memory "k8s.io/client-go/discovery/cached"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -197,6 +207,25 @@ func GetKubeClientSet() (*kubernetes.Clientset, error) {
 	}
 
 	cs, err := kubernetes.NewForConfig(rc)
+	if err != nil {
+		return clientset, err
+	}
+
+	return cs, nil
+}
+
+// GetKubeAPIExtensionClientSet is similar to GetKubeClientSet.
+// It does not have core APIs. It has APIs under "apiextensions.k8s.io/v1beta1"
+// e.g. for "CustomResourceDefinition" kind.
+func GetKubeAPIExtensionClientSet() (*apiextensionsclientset.Clientset, error) {
+	clientset := &apiextensionsclientset.Clientset{}
+
+	rc, err := GetRESTConfig()
+	if err != nil {
+		return clientset, err
+	}
+
+	cs, err := apiextensionsclientset.NewForConfig(rc)
 	if err != nil {
 		return clientset, err
 	}
@@ -596,6 +625,16 @@ func ExtractPlanIntFromPlanStr(input string) (output int) {
 	return output
 }
 
+// ExtractVersionFromContainerImage ...
+func ExtractVersionFromContainerImage(image string) string {
+	splitted := strings.Split(image, ":")
+	if len(splitted) == 2 {
+		return splitted[1]
+	}
+
+	return ""
+}
+
 // SanitizeDependencyName ...
 // https://rubular.com/r/5ibwrOnew3vKpf
 func SanitizeDependencyName(input string) (string, error) {
@@ -623,4 +662,201 @@ func GetMasterIP() (string, error) {
 	}
 	serverURL := restConfig.Host
 	return ExtractIPAddressFromURL(serverURL)
+}
+
+// IsCRDExist ...
+func IsCRDExist(crdName string) bool {
+	clientset, err := GetKubeAPIExtensionClientSet()
+	if err != nil {
+		return false
+	}
+
+	crdClient := clientset.ApiextensionsV1().CustomResourceDefinitions()
+	_, err = crdClient.Get(context.Background(), crdName, metav1.GetOptions{})
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
+// ApplyOperatorManifest ...
+func ApplyOperatorManifest(manifests []string) error {
+	for _, manifest := range manifests {
+		operatorYAMLBytes := []byte(manifest)
+
+		err := ApplyYamlUsingSSA(operatorYAMLBytes, "kubectl")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ApplyYamlUsingSSA ...
+// Inspired from: https://bit.ly/3b6tB6y
+func ApplyYamlUsingSSA(yamlData []byte, owner string) error {
+	DebugPrintf("==========\n")
+
+	// Get REST config
+	restConfig, err := GetRESTConfig()
+	if err != nil {
+		return err
+	}
+
+	// Prepare a decoder to read YAML manifest into `unstructured.Unstructured`
+	decUnstructured := k8syaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+
+	// Prepare a RESTMapper to find GVR
+	dc, err := discovery.NewDiscoveryClientForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
+
+	// Prepare the dynamic client
+	dyn, err := dynamic.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	// Decode YAML manifest into unstructured.Unstructured
+	obj := &unstructured.Unstructured{}
+	_, gvk, err := decUnstructured.Decode(yamlData, nil, obj)
+	if err != nil {
+		return err
+	}
+
+	DebugPrintf("GVK: %+v\n", gvk)
+	serverVersion, err := GetKubeServerVersionCombined()
+	if err != nil {
+		return err
+	}
+
+	if serverVersion >= 119 {
+		// To allow kubectl CLI user to manually run "kubectl apply -f bizaar-operator.yaml",
+		// we need to add "kubectl.kubernetes.io/last-applied-configuration" annotation to this object.
+		// Otherwise, they will get warnings when running that "kubectl apply" command.
+		// * This applies to users using Kubernetes 1.19.x version and onwards.
+		// * The warnings (not errors) still appear for users using Kubernetes 1.17.x and 1.18.x version.
+		metadataInterface := obj.Object["metadata"]
+		metadata, _ := metadataInterface.(map[string]interface{})
+		annotationsInterface := metadata["annotations"]
+		annotations, _ := annotationsInterface.(map[string]interface{})
+		newAnnotations := make(map[string]interface{})
+
+		// Take all current annotations and add them to new annotations
+		for k, v := range annotations {
+			newAnnotations[k] = v
+		}
+		newAnnotations["kubectl.kubernetes.io/last-applied-configuration"] = yamlData
+		metadata["annotations"] = newAnnotations
+		obj.Object["metadata"] = metadata
+	}
+
+	// Find GVR
+	mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return err
+	}
+
+	// Obtain REST interface for the GVR
+	var dr dynamic.ResourceInterface
+	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
+		// namespaced resources should specify the namespace
+		dr = dyn.Resource(mapping.Resource).Namespace(obj.GetNamespace())
+	} else {
+		// for cluster-wide resources
+		dr = dyn.Resource(mapping.Resource)
+	}
+
+	// Marshal object into JSON
+	data, err := json.Marshal(obj)
+	if err != nil {
+		return err
+	}
+
+	// Create or Update the object with SSA
+	//     * types.ApplyPatchType indicates it's SSA operation
+	//     * FieldManager specifies the field owner ID
+	// A note from https://kubernetes.io/docs/reference/using-api/server-side-apply:
+	// "It is strongly recommended for controllers to always "force" conflicts,
+	// ...since they might not be able to resolve or act on these conflicts."
+	force := true
+	DebugPrintf("Applying manifest for %s using SSA...\n", obj.GetName())
+	_, err = dr.Patch(context.Background(), obj.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
+		FieldManager: owner,
+		Force:        &force,
+	})
+
+	DebugPrintf("==========\n")
+	return err
+}
+
+// GetKubeServerVersion ...
+func GetKubeServerVersion() (*version.Info, error) {
+	v := &version.Info{}
+
+	rc, err := GetRESTConfig()
+	if err != nil {
+		return v, err
+	}
+
+	dc, err := discovery.NewDiscoveryClientForConfig(rc)
+	if err != nil {
+		return v, err
+	}
+
+	return dc.ServerVersion()
+}
+
+// GetKubeServerVersionHuman ...
+func GetKubeServerVersionHuman() (string, error) {
+	version, err := GetKubeServerVersion()
+	if err != nil {
+		return "", err
+	}
+
+	return version.GitVersion, nil
+}
+
+// GetKubeServerVersionCombined ...
+func GetKubeServerVersionCombined() (int, error) {
+	version, err := GetKubeServerVersion()
+	if err != nil {
+		return 0, err
+	}
+
+	combined := fmt.Sprintf("%s%s", version.Major, version.Minor)
+	vInt, err := strconv.Atoi(combined)
+	if err != nil {
+		return 0, err
+	}
+
+	return vInt, nil
+}
+
+// GetInstalledOperatorVersion ...
+func GetInstalledOperatorVersion() (string, error) {
+	cs, err := GetKubeClientSet()
+	if err != nil {
+		return "", err
+	}
+
+	deployClient := cs.AppsV1().Deployments("bizaar-system")
+	deployment, err := deployClient.Get(context.Background(), "bizaar-operator-controller-manager", metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	containers := deployment.Spec.Template.Spec.Containers
+	for _, container := range containers {
+		if container.Name == "manager" {
+			imageVersion := ExtractVersionFromContainerImage(container.Image)
+			return imageVersion, nil
+		}
+	}
+
+	return "", fmt.Errorf("Manager container not found")
 }

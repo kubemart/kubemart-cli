@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/civo/bizaar/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -38,6 +39,23 @@ var (
 				fmt.Printf("Build date (client): %s\n", DateCli)
 				fmt.Printf("Git commit (client): %s\n", CommitCli)
 				fmt.Printf("OS/Arch (client): %s/%s\n", runtime.GOOS, runtime.GOARCH)
+
+				serverVersion, _ := utils.GetKubeServerVersionHuman()
+				fmt.Printf("Kubernetes version: %s\n", serverVersion)
+
+				operatorVersion, _ := utils.GetInstalledOperatorVersion()
+				fmt.Printf("Operator version: %s\n", operatorVersion)
+
+				isAppCRDInstalled := "not installed"
+				isJobWatcherCRDInstalled := "not installed"
+				if utils.IsCRDExist("apps.bizaar.civo.com") {
+					isAppCRDInstalled = "installed"
+				}
+				if utils.IsCRDExist("jobwatchers.bizaar.civo.com") {
+					isJobWatcherCRDInstalled = "installed"
+				}
+				fmt.Printf("App CRD status: %s\n", isAppCRDInstalled)
+				fmt.Printf("JobWatcher CRD status: %s\n", isJobWatcherCRDInstalled)
 
 				// TODO - uncomment this after we go live
 				// res, err := latest.Check(githubTag, strings.Replace(VersionCli, "v", "", 1))

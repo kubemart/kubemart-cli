@@ -16,8 +16,10 @@ limitations under the License.
 package cmd
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
+	"strings"
 
 	utils "github.com/civo/bizaar/pkg/utils"
 	"github.com/spf13/cobra"
@@ -28,6 +30,10 @@ var Email string
 
 // DomainName is used for BIZAAR:DOMAIN_NAME
 var DomainName string
+
+// TODO - change this after we go live
+//go:embed manifests/bizaar-operator.yaml
+var operatorYAML string
 
 // initCmd represents the init command
 var initCmd = &cobra.Command{
@@ -132,6 +138,13 @@ var initCmd = &cobra.Command{
 				fmt.Printf("Unable to create ConfigMap - %v\n", err.Error())
 				os.Exit(1)
 			}
+		}
+
+		manifests := strings.Split(operatorYAML, "---")
+		err = utils.ApplyOperatorManifest(manifests)
+		if err != nil {
+			fmt.Printf("Unable to deploy operator - %v\n", err.Error())
+			os.Exit(1)
 		}
 
 		fmt.Println("You are good to go")
