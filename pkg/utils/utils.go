@@ -652,6 +652,18 @@ func SanitizeDependencyName(input string) (string, error) {
 	return cleaned, nil
 }
 
+// SanitizeVersionSegment ...
+// Sometimes, k8s server minor version contains special characters
+// e.g. 1.21+ (for v1.21.0-beta.0). This function will exclude all special
+// characters from a version segment. For instance, if the input
+// is "21+" (using minor segment as example here), this function will
+// return "21" so we can parse it to integer without any issues.
+func SanitizeVersionSegment(input string) string {
+	re := regexp.MustCompile("[0-9]+")
+	cleanedArr := re.FindAllString(input, -1)
+	return cleanedArr[0]
+}
+
 // GetMasterIP returns the master/control-plane IP address
 func GetMasterIP() (string, error) {
 	kubeConfig := GetKubeconfig()
@@ -828,7 +840,12 @@ func GetKubeServerVersionCombined() (int, error) {
 		return 0, err
 	}
 
-	combined := fmt.Sprintf("%s%s", version.Major, version.Minor)
+	major := SanitizeVersionSegment(version.Major)
+	minor := SanitizeVersionSegment(version.Minor)
+	// DebugPrintf("k8s major version: %s\n", major)
+	// DebugPrintf("k8s minor version: %s\n", minor)
+
+	combined := fmt.Sprintf("%s%s", major, minor)
 	vInt, err := strconv.Atoi(combined)
 	if err != nil {
 		return 0, err
