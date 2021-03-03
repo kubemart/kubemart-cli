@@ -27,7 +27,7 @@ jobs:
 
       # TODO - change this after we go live
       - name: Download bizaar-operator manifest
-        uses: dsaltares/fetch-gh-release-asset@0.0.5
+        uses: dsaltares/fetch-gh-release-asset@939be9e72e81fe7009b6112bc96abde38bf7b68f
         with:
           repo: "civo/bizaar-operator"
           version: "latest"
