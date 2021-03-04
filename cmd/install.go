@@ -44,6 +44,12 @@ var installCmd = &cobra.Command{
 		}
 		utils.DebugPrintf("App name to install: %s\n", appName)
 
+		appExists := utils.IsAppExist(appName)
+		if !appExists {
+			fmt.Printf("Unable to find %s app. Please try again.\n", appName)
+			os.Exit(1)
+		}
+
 		appPlans, err := utils.GetAppPlans(appName)
 		if err != nil {
 			fmt.Printf("Unable to list app's plans - %v\n", err)
@@ -77,7 +83,7 @@ var installCmd = &cobra.Command{
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      appName,
-				Namespace: "default",
+				Namespace: "bizaar-system",
 			},
 			Spec: operator.AppSpec{
 				Name:   appName,
@@ -98,11 +104,10 @@ var installCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// TODO - use bizaar-operator Go client
 		wasCreated := false
 		res := clientset.RESTClient().
 			Post().
-			AbsPath("/apis/bizaar.civo.com/v1alpha1/namespaces/default/apps").
+			AbsPath("/apis/bizaar.civo.com/v1alpha1/namespaces/bizaar-system/apps").
 			Body(body).
 			Do(context.Background())
 

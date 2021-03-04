@@ -235,7 +235,7 @@ func GetKubeAPIExtensionClientSet() (*apiextensionsclientset.Clientset, error) {
 
 // IsBizaarConfigMapExist returns true if "bizaar-config" ConfigMap is found
 func IsBizaarConfigMapExist() (bool, error) {
-	namespace := "bizaar"
+	namespace := "bizaar-system"
 	clientset, err := GetKubeClientSet()
 	if err != nil {
 		return false, err
@@ -255,7 +255,7 @@ func IsBizaarConfigMapExist() (bool, error) {
 
 // CreateBizaarConfigMap will create "bizaar-config" ConfigMap
 func CreateBizaarConfigMap(bcm *BizaarConfigMap) error {
-	namespace := "bizaar"
+	namespace := "bizaar-system"
 	configMapData := make(map[string]string)
 	configMapData["email"] = bcm.EmailAddress
 	configMapData["domain"] = bcm.DomainName
@@ -309,7 +309,7 @@ func IsNamespaceExist(namespace string) (bool, error) {
 
 // CreateBizaarNamespace will create "bizaar-config" ConfigMap
 func CreateBizaarNamespace() error {
-	namespace := "bizaar"
+	namespace := "bizaar-system"
 	clientset, err := GetKubeClientSet()
 	if err != nil {
 		return err
@@ -876,4 +876,18 @@ func GetInstalledOperatorVersion() (string, error) {
 	}
 
 	return "", fmt.Errorf("Manager container not found")
+}
+
+// IsAppExist ...
+func IsAppExist(appName string) bool {
+	bp, err := GetBizaarPaths()
+	if err != nil {
+		return false
+	}
+
+	appFolderPath := filepath.Join(bp.AppsDirectoryPath, appName)
+	if _, err := os.Stat(appFolderPath); !os.IsNotExist(err) {
+		return true
+	}
+	return false
 }

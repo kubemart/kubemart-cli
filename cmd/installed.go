@@ -37,12 +37,11 @@ var installedCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// TODO - use bizaar-operator Go client
 		statusCode := 0
 		res := clientset.RESTClient().
 			Get().
 			AbsPath("/apis/bizaar.civo.com/v1alpha1").
-			Namespace("default").
+			Namespace("bizaar-system").
 			Resource("apps").
 			Do(context.Background())
 

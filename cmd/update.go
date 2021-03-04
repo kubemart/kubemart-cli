@@ -47,7 +47,7 @@ var updateCmd = &cobra.Command{
 		}
 
 		app := &operator.App{}
-		path := fmt.Sprintf("/apis/bizaar.civo.com/v1alpha1/namespaces/default/apps/%s", appName)
+		path := fmt.Sprintf("/apis/bizaar.civo.com/v1alpha1/namespaces/bizaar-system/apps/%s", appName)
 		err = clientset.RESTClient().
 			Get().
 			AbsPath(path).

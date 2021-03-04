@@ -39,6 +39,7 @@ var (
 				fmt.Printf("Build date (client): %s\n", DateCli)
 				fmt.Printf("Git commit (client): %s\n", CommitCli)
 				fmt.Printf("OS/Arch (client): %s/%s\n", runtime.GOOS, runtime.GOARCH)
+				fmt.Println("---")
 
 				serverVersion, _ := utils.GetKubeServerVersionHuman()
 				fmt.Printf("Kubernetes version: %s\n", serverVersion)
@@ -56,6 +57,13 @@ var (
 				}
 				fmt.Printf("App CRD status: %s\n", isAppCRDInstalled)
 				fmt.Printf("JobWatcher CRD status: %s\n", isJobWatcherCRDInstalled)
+
+				namespaceStatus := "not created"
+				isNamespaceExist, _ := utils.IsNamespaceExist("bizaar-system")
+				if isNamespaceExist {
+					namespaceStatus = "created"
+				}
+				fmt.Printf("Namespace (bizaar-system) status: %s\n", namespaceStatus)
 
 				// TODO - uncomment this after we go live
 				// res, err := latest.Check(githubTag, strings.Replace(VersionCli, "v", "", 1))

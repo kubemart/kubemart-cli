@@ -43,8 +43,7 @@ var uninstallCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// TODO - use bizaar-operator Go client
-		path := fmt.Sprintf("/apis/bizaar.civo.com/v1alpha1/namespaces/default/apps/%s", appName)
+		path := fmt.Sprintf("/apis/bizaar.civo.com/v1alpha1/namespaces/bizaar-system/apps/%s", appName)
 		res := clientset.RESTClient().
 			Delete().
 			AbsPath(path).
