@@ -36,6 +36,7 @@ var rootCmd = &cobra.Command{
 		canSkipUpdateApps = make(map[string]bool)
 		canSkipUpdateApps["init"] = true
 		canSkipUpdateApps["version"] = true
+		canSkipUpdateApps["system-upgrade"] = true
 
 		_, found := canSkipUpdateApps[cmd.Name()]
 		if !found {

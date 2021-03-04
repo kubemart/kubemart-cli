@@ -140,6 +140,7 @@ var initCmd = &cobra.Command{
 			}
 		}
 
+		// TODO - change this after we go live
 		manifests := strings.Split(operatorYAML, "---")
 		err = utils.ApplyOperatorManifest(manifests)
 		if err != nil {
