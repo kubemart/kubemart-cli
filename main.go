@@ -15,7 +15,7 @@ limitations under the License.
 */
 package main
 
-import "github.com/civo/bizaar/cmd"
+import "github.com/kubemart/kubemart/cmd"
 
 func main() {
 	cmd.Execute()

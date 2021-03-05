@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/civo/bizaar/pkg/utils"
+	"github.com/kubemart/kubemart/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -22,14 +22,15 @@ var (
 	DateCli = "unknown"
 
 	versionCmd = &cobra.Command{
-		Use:   "version",
-		Short: "Version will output the current build information",
+		Use:     "version",
+		Example: "kubemart version",
+		Short:   "Output the current build information",
 		Run: func(cmd *cobra.Command, args []string) {
 
 			// TODO - uncomment this after we go live
 			// githubTag := &latest.GithubTag{
-			// 	Owner:             "civo",
-			// 	Repository:        "bizaar-cli",
+			// 	Owner:             "kubemart",
+			// 	Repository:        "kubemart-cli",
 			// 	FixVersionStrFunc: latest.DeleteFrontV(),
 			// }
 			switch {
@@ -49,21 +50,21 @@ var (
 
 				isAppCRDInstalled := "not installed"
 				isJobWatcherCRDInstalled := "not installed"
-				if utils.IsCRDExist("apps.bizaar.civo.com") {
+				if utils.IsCRDExist("apps.kubemart.civo.com") {
 					isAppCRDInstalled = "installed"
 				}
-				if utils.IsCRDExist("jobwatchers.bizaar.civo.com") {
+				if utils.IsCRDExist("jobwatchers.kubemart.civo.com") {
 					isJobWatcherCRDInstalled = "installed"
 				}
 				fmt.Printf("App CRD status: %s\n", isAppCRDInstalled)
 				fmt.Printf("JobWatcher CRD status: %s\n", isJobWatcherCRDInstalled)
 
 				namespaceStatus := "not created"
-				isNamespaceExist, _ := utils.IsNamespaceExist("bizaar-system")
+				isNamespaceExist, _ := utils.IsNamespaceExist("kubemart-system")
 				if isNamespaceExist {
 					namespaceStatus = "created"
 				}
-				fmt.Printf("Namespace (bizaar-system) status: %s\n", namespaceStatus)
+				fmt.Printf("Namespace (kubemart-system) status: %s\n", namespaceStatus)
 
 				// TODO - uncomment this after we go live
 				// res, err := latest.Check(githubTag, strings.Replace(VersionCli, "v", "", 1))
@@ -97,6 +98,6 @@ var (
 
 func init() {
 	rootCmd.AddCommand(versionCmd)
-	versionCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Use quiet output for simple output")
-	versionCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Use verbose output to see full information")
+	versionCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "display simple output")
+	versionCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "display full information")
 }

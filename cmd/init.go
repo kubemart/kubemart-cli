@@ -21,24 +21,25 @@ import (
 	"os"
 	"strings"
 
-	utils "github.com/civo/bizaar/pkg/utils"
+	utils "github.com/kubemart/kubemart/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
-// Email is used for BIZAAR:EMAIL_ADDRESS
+// Email is used for KUBEMART:EMAIL_ADDRESS
 var Email string
 
-// DomainName is used for BIZAAR:DOMAIN_NAME
+// DomainName is used for KUBEMART:DOMAIN_NAME
 var DomainName string
 
 // TODO - change this after we go live
-//go:embed manifests/bizaar-operator.yaml
+//go:embed manifests/kubemart-operator.yaml
 var operatorYAML string
 
 // initCmd represents the init command
 var initCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Setup local environment and install Bizaar operator",
+	Use:     "init",
+	Example: "kubemart init --email your@email.com",
+	Short:   "Setup local environment and install Kubemart operator",
 	Run: func(cmd *cobra.Command, args []string) {
 		masterIP, err := utils.GetMasterIP()
 		if err != nil {
@@ -56,13 +57,13 @@ var initCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		bcm := &utils.BizaarConfigMap{
+		bcm := &utils.KubemartConfigMap{
 			EmailAddress: Email,
 			DomainName:   DomainName,
 			ClusterName:  clusterName,
 			MasterIP:     masterIP,
 		}
-		utils.DebugPrintf("Bizaar ConfigMap: %+v\n", bcm)
+		utils.DebugPrintf("Kubemart ConfigMap: %+v\n", bcm)
 
 		gitProgram := "git"
 		if !utils.IsCommandAvailable(gitProgram) {
@@ -70,29 +71,30 @@ var initCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		bizaarPaths, err := utils.GetBizaarPaths()
+		kubemartPaths, err := utils.GetKubemartPaths()
 		if err != nil {
-			fmt.Printf("Unable to load Bizaar paths - %v\n", err.Error())
+			fmt.Printf("Unable to load Kubemart paths - %v\n", err.Error())
 			os.Exit(1)
 		}
 
-		bizaarDirPath := bizaarPaths.RootDirectoryPath
-		appsDirPath := bizaarPaths.AppsDirectoryPath
-		configFilePath := bizaarPaths.ConfigFilePath
-		if _, err := os.Stat(bizaarDirPath); os.IsNotExist(err) {
-			// When bizaarDir is not exist, create it (with apps folder and config.json file)
+		kubemartDirPath := kubemartPaths.RootDirectoryPath
+		appsDirPath := kubemartPaths.AppsDirectoryPath
+		configFilePath := kubemartPaths.ConfigFilePath
+		if _, err := os.Stat(kubemartDirPath); os.IsNotExist(err) {
+			// When kubemartDir is not exist, create it (with apps folder and config.json file)
+			fmt.Println("Fetching apps...")
 
 			// Create apps folder
 			err = os.MkdirAll(appsDirPath, 0755)
 			if err != nil {
-				fmt.Println("Unable to create ~/.bizaar/apps directory ($ mkdir -p ~/.bizaar/apps)")
+				fmt.Println("Unable to create ~/.kubemart/apps directory ($ mkdir -p ~/.kubemart/apps)")
 				os.Exit(1)
 			}
 
 			// Create config.json file
 			_, err := os.Create(configFilePath)
 			if err != nil {
-				fmt.Println("Unable to create ~/.bizaar/config.json file")
+				fmt.Println("Unable to create ~/.kubemart/config.json file")
 				os.Exit(1)
 			}
 
@@ -112,28 +114,30 @@ var initCmd = &cobra.Command{
 			}
 		}
 
-		namespaceExists, err := utils.IsNamespaceExist("bizaar-system")
+		namespaceExists, err := utils.IsNamespaceExist("kubemart-system")
 		if err != nil {
 			fmt.Printf("Unable to check namespace - %v\n", err.Error())
 			os.Exit(1)
 		}
 
 		if !namespaceExists {
-			err = utils.CreateBizaarNamespace()
+			fmt.Println("Creating Namespace (for operator)...")
+			err = utils.CreateKubemartNamespace()
 			if err != nil {
 				fmt.Printf("Unable to create namespace - %v\n", err.Error())
 				os.Exit(1)
 			}
 		}
 
-		configMapExists, err := utils.IsBizaarConfigMapExist()
+		configMapExists, err := utils.IsKubemartConfigMapExist()
 		if err != nil {
 			fmt.Printf("Unable to check ConfigMap - %v\n", err.Error())
 			os.Exit(1)
 		}
 
 		if !configMapExists {
-			err = utils.CreateBizaarConfigMap(bcm)
+			fmt.Println("Creating ConfigMap (for operator)...")
+			err = utils.CreateKubemartConfigMap(bcm)
 			if err != nil {
 				fmt.Printf("Unable to create ConfigMap - %v\n", err.Error())
 				os.Exit(1)
@@ -141,10 +145,11 @@ var initCmd = &cobra.Command{
 		}
 
 		// TODO - change this after we go live
+		fmt.Println("Applying manifests...")
 		manifests := strings.Split(operatorYAML, "---")
-		err = utils.ApplyOperatorManifest(manifests)
+		err = utils.ApplyManifests(manifests)
 		if err != nil {
-			fmt.Printf("Unable to deploy operator - %v\n", err.Error())
+			fmt.Printf("Unable to apply manifest - %v\n", err.Error())
 			os.Exit(1)
 		}
 
@@ -154,8 +159,8 @@ var initCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(initCmd)
-	initCmd.Flags().StringVarP(&Email, "email", "e", "", "Email address (required)")
-	initCmd.Flags().StringVarP(&DomainName, "domain-name", "d", "", "Domain name (will default to master_ip.xip.io if not supplied)")
+	initCmd.Flags().StringVarP(&Email, "email", "e", "", "email address (required)")
+	initCmd.Flags().StringVarP(&DomainName, "domain-name", "n", "", "domain name (will default to master_ip.xip.io if not supplied)")
 	initCmd.MarkFlagRequired("email")
 
 	// Here you will define your flags and configuration settings.

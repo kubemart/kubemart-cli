@@ -38,13 +38,18 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+// manifestOperation for Server Side Apply
+type manifestOperation string
+
 const (
-	allowedMinutes     = 30 // for caching
-	marketplaceAccount = "zulh-civo"
-	marketplaceBranch  = "b"
+	applySSA           manifestOperation = "apply"
+	deleteSSA          manifestOperation = "delete"
+	allowedMinutes                       = 30 // for caching
+	marketplaceAccount                   = "zulh-civo"
+	marketplaceBranch                    = "b"
 )
 
-// AppManifest is used when parsing app manifest.yaml from ~/.bizaar/apps folder
+// AppManifest is used when parsing app manifest.yaml from ~/.kubemart/apps folder
 type AppManifest struct {
 	Namespace    string   `yaml:"namespace"`
 	Dependencies []string `yaml:"dependencies"`
@@ -56,46 +61,46 @@ type AppManifest struct {
 	} `yaml:"plans"`
 }
 
-// BizaarConfigFile is the structure of ~/.bizaar/config.json file
-type BizaarConfigFile struct {
+// KubemartConfigFile is the structure of ~/.kubemart/config.json file
+type KubemartConfigFile struct {
 	AppsLastUpdatedAt int64 `json:"apps_last_updated_at"`
 }
 
-// BizaarConfigMap is used when saving ConfigMap
-type BizaarConfigMap struct {
+// KubemartConfigMap is used when saving ConfigMap
+type KubemartConfigMap struct {
 	EmailAddress string
 	DomainName   string
 	ClusterName  string
 	MasterIP     string
 }
 
-// BizaarPaths contains all important paths for Bizaar operation
-type BizaarPaths struct {
+// KubemartPaths contains all important paths for kubemart operation
+type KubemartPaths struct {
 	RootDirectoryPath string
 	AppsDirectoryPath string
 	ConfigFilePath    string
 }
 
-// GetBizaarPaths returns BizaarPaths struct
-func GetBizaarPaths() (*BizaarPaths, error) {
-	bp := &BizaarPaths{}
+// GetKubemartPaths returns KubemartPaths struct
+func GetKubemartPaths() (*KubemartPaths, error) {
+	bp := &KubemartPaths{}
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return bp, err
 	}
 
-	bizaarDirPath := filepath.Join(homeDir, ".bizaar")
-	bp.RootDirectoryPath = bizaarDirPath
-	bp.AppsDirectoryPath = filepath.Join(bizaarDirPath, "apps")
-	bp.ConfigFilePath = filepath.Join(bizaarDirPath, "config.json")
+	kubemartDirPath := filepath.Join(homeDir, ".kubemart")
+	bp.RootDirectoryPath = kubemartDirPath
+	bp.AppsDirectoryPath = filepath.Join(kubemartDirPath, "apps")
+	bp.ConfigFilePath = filepath.Join(kubemartDirPath, "config.json")
 
 	return bp, nil
 }
 
 // GetAppNamespace ...
 func GetAppNamespace(appName string) (string, error) {
-	bp, err := GetBizaarPaths()
+	bp, err := GetKubemartPaths()
 	if err != nil {
 		return "", err
 	}
@@ -119,7 +124,7 @@ func GetAppNamespace(appName string) (string, error) {
 // GetAppDependencies will fetch app's dependencies and return in slice type
 func GetAppDependencies(appName string) ([]string, error) {
 	dependencies := []string{}
-	bp, err := GetBizaarPaths()
+	bp, err := GetKubemartPaths()
 	if err != nil {
 		return dependencies, err
 	}
@@ -151,7 +156,7 @@ func GetAppDependencies(appName string) ([]string, error) {
 // GetAppPlans returns sorted app plans e.g. [5,10,20]
 func GetAppPlans(appName string) ([]int, error) {
 	plans := []int{}
-	bp, err := GetBizaarPaths()
+	bp, err := GetKubemartPaths()
 	if err != nil {
 		return plans, err
 	}
@@ -233,16 +238,16 @@ func GetKubeAPIExtensionClientSet() (*apiextensionsclientset.Clientset, error) {
 	return cs, nil
 }
 
-// IsBizaarConfigMapExist returns true if "bizaar-config" ConfigMap is found
-func IsBizaarConfigMapExist() (bool, error) {
-	namespace := "bizaar-system"
+// IsKubemartConfigMapExist returns true if "kubemart-config" ConfigMap is found
+func IsKubemartConfigMapExist() (bool, error) {
+	namespace := "kubemart-system"
 	clientset, err := GetKubeClientSet()
 	if err != nil {
 		return false, err
 	}
 
 	cmClient := clientset.CoreV1().ConfigMaps(namespace)
-	_, err = cmClient.Get(context.Background(), "bizaar-config", metav1.GetOptions{})
+	_, err = cmClient.Get(context.Background(), "kubemart-config", metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return false, nil
@@ -253,9 +258,9 @@ func IsBizaarConfigMapExist() (bool, error) {
 	return true, nil
 }
 
-// CreateBizaarConfigMap will create "bizaar-config" ConfigMap
-func CreateBizaarConfigMap(bcm *BizaarConfigMap) error {
-	namespace := "bizaar-system"
+// CreateKubemartConfigMap will create "kubemart-config" ConfigMap
+func CreateKubemartConfigMap(bcm *KubemartConfigMap) error {
+	namespace := "kubemart-system"
 	configMapData := make(map[string]string)
 	configMapData["email"] = bcm.EmailAddress
 	configMapData["domain"] = bcm.DomainName
@@ -268,7 +273,7 @@ func CreateBizaarConfigMap(bcm *BizaarConfigMap) error {
 			Kind:       "ConfigMap",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "bizaar-config",
+			Name:      "kubemart-config",
 			Namespace: namespace,
 		},
 		Data: configMapData,
@@ -307,9 +312,9 @@ func IsNamespaceExist(namespace string) (bool, error) {
 	return true, nil
 }
 
-// CreateBizaarNamespace will create "bizaar-config" ConfigMap
-func CreateBizaarNamespace() error {
-	namespace := "bizaar-system"
+// CreateKubemartNamespace will create "kubemart-system" Namespace
+func CreateKubemartNamespace() error {
+	namespace := "kubemart-system"
 	clientset, err := GetKubeClientSet()
 	if err != nil {
 		return err
@@ -348,9 +353,9 @@ func DeleteNamespace(namespace string) error {
 
 // RenderPostInstallMarkdown will fetch app's post_install.md and render to user's stdout
 func RenderPostInstallMarkdown(appName string) {
-	bp, err := GetBizaarPaths()
+	bp, err := GetKubemartPaths()
 	if err != nil {
-		fmt.Printf("Unable to get Bizaar paths - %v\n", err.Error())
+		fmt.Printf("Unable to get kubemart paths - %v\n", err.Error())
 		os.Exit(1)
 	}
 
@@ -436,9 +441,9 @@ func GitPull(directory string) (string, error) {
 	return string(out), nil
 }
 
-// GetConfigFileLastUpdatedTimestamp is used to read timestamp field from ~/.bizaar/config.json file
+// GetConfigFileLastUpdatedTimestamp is used to read timestamp field from ~/.kubemart/config.json file
 func GetConfigFileLastUpdatedTimestamp() int64 {
-	bp, err := GetBizaarPaths()
+	bp, err := GetKubemartPaths()
 	if err != nil {
 		return 0
 	}
@@ -448,7 +453,7 @@ func GetConfigFileLastUpdatedTimestamp() int64 {
 		return 0
 	}
 
-	config := &BizaarConfigFile{}
+	config := &KubemartConfigFile{}
 	err = json.Unmarshal(configFile, config)
 	if err != nil {
 		return 0
@@ -457,15 +462,15 @@ func GetConfigFileLastUpdatedTimestamp() int64 {
 	return config.AppsLastUpdatedAt
 }
 
-// UpdateConfigFileLastUpdatedTimestamp will update timestamp field of ~/.bizaar/config.json file
+// UpdateConfigFileLastUpdatedTimestamp will update timestamp field of ~/.kubemart/config.json file
 func UpdateConfigFileLastUpdatedTimestamp() error {
-	bp, err := GetBizaarPaths()
+	bp, err := GetKubemartPaths()
 	if err != nil {
 		return err
 	}
 
 	configFilePath := bp.ConfigFilePath
-	config := &BizaarConfigFile{
+	config := &KubemartConfigFile{
 		AppsLastUpdatedAt: time.Now().Unix(),
 	}
 
@@ -482,8 +487,8 @@ func UpdateConfigFileLastUpdatedTimestamp() error {
 	return nil
 }
 
-// UpdateAppsCacheIfStale will run `git pull` in the context of ~/.bizaar/apps folder
-// and update the timestamp field in the ~/.bizaar/config.json file
+// UpdateAppsCacheIfStale will run `git pull` in the context of ~/.kubemart/apps folder
+// and update the timestamp field in the ~/.kubemart/config.json file
 func UpdateAppsCacheIfStale() {
 	lastUpdated := GetConfigFileLastUpdatedTimestamp()
 	now := time.Now().Unix()
@@ -491,9 +496,9 @@ func UpdateAppsCacheIfStale() {
 
 	allowedSeconds := int64(60 * allowedMinutes)
 	if diff > allowedSeconds {
-		bp, err := GetBizaarPaths()
+		bp, err := GetKubemartPaths()
 		if err != nil {
-			fmt.Printf("Unable to load Bizaar paths - %v\n", err)
+			fmt.Printf("Unable to load kubemart paths - %v\n", err)
 			os.Exit(1)
 		}
 
@@ -501,6 +506,7 @@ func UpdateAppsCacheIfStale() {
 		pullOutput, err := GitPull(appsFolder)
 		if err != nil {
 			fmt.Printf("Unable to Git pull latest apps - %v\n", err)
+			fmt.Printf("You may need to run 'kubemart init' command to resolve this problem\n")
 			os.Exit(1)
 		}
 		DebugPrintf("Pull output: %+v\n", pullOutput)
@@ -692,12 +698,13 @@ func IsCRDExist(crdName string) bool {
 	return true
 }
 
-// ApplyOperatorManifest ...
-func ApplyOperatorManifest(manifests []string) error {
+// ApplyManifests ...
+func ApplyManifests(manifests []string) error {
 	for _, manifest := range manifests {
 		operatorYAMLBytes := []byte(manifest)
 
-		err := ApplyYamlUsingSSA(operatorYAMLBytes, "kubectl")
+		operation := applySSA
+		err := ExecuteSSA(operatorYAMLBytes, &operation, "kubectl")
 		if err != nil {
 			return err
 		}
@@ -706,9 +713,24 @@ func ApplyOperatorManifest(manifests []string) error {
 	return nil
 }
 
-// ApplyYamlUsingSSA ...
+// DeleteManifests ...
+func DeleteManifests(manifests []string) error {
+	for _, manifest := range manifests {
+		operatorYAMLBytes := []byte(manifest)
+
+		operation := deleteSSA
+		err := ExecuteSSA(operatorYAMLBytes, &operation, "kubectl")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ExecuteSSA ...
 // Inspired from: https://bit.ly/3b6tB6y
-func ApplyYamlUsingSSA(yamlData []byte, owner string) error {
+func ExecuteSSA(yamlData []byte, action *manifestOperation, owner string) error {
 	DebugPrintf("==========\n")
 
 	// Get REST config
@@ -747,7 +769,7 @@ func ApplyYamlUsingSSA(yamlData []byte, owner string) error {
 	}
 
 	if serverVersion >= 119 {
-		// To allow kubectl CLI user to manually run "kubectl apply -f bizaar-operator.yaml",
+		// To allow kubectl CLI user to manually run "kubectl apply -f kubemart-operator.yaml",
 		// we need to add "kubectl.kubernetes.io/last-applied-configuration" annotation to this object.
 		// Otherwise, they will get warnings when running that "kubectl apply" command.
 		// * This applies to users using Kubernetes 1.19.x version and onwards.
@@ -789,18 +811,35 @@ func ApplyYamlUsingSSA(yamlData []byte, owner string) error {
 		return err
 	}
 
-	// Create or Update the object with SSA
-	//     * types.ApplyPatchType indicates it's SSA operation
-	//     * FieldManager specifies the field owner ID
-	// A note from https://kubernetes.io/docs/reference/using-api/server-side-apply:
-	// "It is strongly recommended for controllers to always "force" conflicts,
-	// ...since they might not be able to resolve or act on these conflicts."
-	force := true
-	DebugPrintf("Applying manifest for %s using SSA...\n", obj.GetName())
-	_, err = dr.Patch(context.Background(), obj.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
-		FieldManager: owner,
-		Force:        &force,
-	})
+	if *action == applySSA {
+		// Create or Update the object with SSA
+		//     * types.ApplyPatchType indicates it's SSA operation
+		//     * FieldManager specifies the field owner ID
+		// A note from https://kubernetes.io/docs/reference/using-api/server-side-apply:
+		// "It is strongly recommended for controllers to always "force" conflicts,
+		// ...since they might not be able to resolve or act on these conflicts."
+		force := true
+		DebugPrintf("Applying manifest for %s using SSA...\n", obj.GetName())
+		_, err = dr.Patch(context.Background(), obj.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
+			FieldManager: owner,
+			Force:        &force,
+		})
+	}
+
+	if *action == deleteSSA {
+		DebugPrintf("Deleting manifest for %s using SSA...\n", obj.GetName())
+		gp := int64(0)
+		dpb := metav1.DeletePropagationBackground
+		err = dr.Delete(context.Background(), obj.GetName(), metav1.DeleteOptions{
+			GracePeriodSeconds: &gp,
+			PropagationPolicy:  &dpb,
+		})
+
+		// if the target resource is not found, just move on
+		if errors.IsNotFound(err) {
+			err = nil
+		}
+	}
 
 	DebugPrintf("==========\n")
 	return err
@@ -861,8 +900,8 @@ func GetInstalledOperatorVersion() (string, error) {
 		return "", err
 	}
 
-	deployClient := cs.AppsV1().Deployments("bizaar-system")
-	deployment, err := deployClient.Get(context.Background(), "bizaar-operator-controller-manager", metav1.GetOptions{})
+	deployClient := cs.AppsV1().Deployments("kubemart-system")
+	deployment, err := deployClient.Get(context.Background(), "kubemart-operator-controller-manager", metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -880,7 +919,7 @@ func GetInstalledOperatorVersion() (string, error) {
 
 // IsAppExist ...
 func IsAppExist(appName string) bool {
-	bp, err := GetBizaarPaths()
+	bp, err := GetKubemartPaths()
 	if err != nil {
 		return false
 	}

@@ -1,4 +1,4 @@
-project_name: bizaar
+project_name: kubemart
 builds:
   - env:
       - CGO_ENABLED=0
@@ -17,7 +17,7 @@ builds:
       - goos: windows
         goarch: 386
     ldflags:
-      - -s -w -X github.com/civo/bizaar/cmd.VersionCli={{.Version}} -X github.com/civo/bizaar/cmd.CommitCli={{.Commit}} -X github.com/civo/bizaar/cmd.DateCli={{.Date}}
+      - -s -w -X github.com/kubemart/kubemart/cmd.VersionCli={{.Version}} -X github.com/kubemart/kubemart/cmd.CommitCli={{.Commit}} -X github.com/kubemart/kubemart/cmd.DateCli={{.Date}}
 checksum:
   name_template: "{{ .ProjectName }}-{{ .Version }}-checksums.sha256"
 changelog:
@@ -34,7 +34,7 @@ archives:
       - goos: windows
         format: zip
 brews:
-  - name: bizaar
+  - name: kubemart
     tap:
       owner: civo
       name: homebrew-tools
@@ -42,23 +42,13 @@ brews:
       name: civobot
       email: hello@civo.com
     folder: Formula
-    homepage: "https://github.com/civo/bizaar-cli"
-    description: "CLI for interacting with your Bizaar apps"
-# TODO
-# dockers:
-#   - goos: linux
-#     goarch: amd64
-#     ids:
-#       - civo
-#     image_templates:
-#       - "civo/cli:latest"
-#       - "civo/cli:{{ .Tag }}"
-#     dockerfile: docker/Dockerfile
+    homepage: "https://github.com/kubemart/kubemart-cli"
+    description: "CLI for interacting with your Kubemart apps"
 nfpms:
   - file_name_template: "{{ .ProjectName }}_{{ .Arch }}"
-    homepage: https://github.com/civo/bizaar-cli
+    homepage: https://github.com/kubemart/kubemart-cli
     maintainer: Civo <hello@civo.com>
-    description: A Command Line Interface (CLI) for interacting with your Bizaar apps
+    description: A Command Line Interface (CLI) for interacting with your Kubemart apps
     license: MIT
     vendor: Civo
     formats:

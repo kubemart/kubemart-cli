@@ -16,22 +16,19 @@ limitations under the License.
 package cmd
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 
-	operator "github.com/civo/bizaar-operator/api/v1alpha1"
-	utils "github.com/civo/bizaar/pkg/utils"
+	utils "github.com/kubemart/kubemart/pkg/utils"
 	"github.com/spf13/cobra"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 // updateCmd represents the update command
 var updateCmd = &cobra.Command{
-	Use:   "update",
-	Short: "Update an application",
-	Args:  cobra.MinimumNArgs(1),
+	Use:     "update APP_NAME",
+	Example: "kubemart update rabbitmq",
+	Short:   "Update an application",
+	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		appName := args[0]
 		if appName == "" {
@@ -40,47 +37,7 @@ var updateCmd = &cobra.Command{
 		}
 		utils.DebugPrintf("App name to install: %s\n", appName)
 
-		clientset, err := utils.GetKubeClientSet()
-		if err != nil {
-			fmt.Printf("Unable to create k8s clientset - %v\n", err)
-			os.Exit(1)
-		}
-
-		app := &operator.App{}
-		path := fmt.Sprintf("/apis/bizaar.civo.com/v1alpha1/namespaces/bizaar-system/apps/%s", appName)
-		err = clientset.RESTClient().
-			Get().
-			AbsPath(path).
-			Do(context.Background()).
-			Into(app)
-		if err != nil {
-			fmt.Printf("Unable to fetch app data - %v\n", err)
-			os.Exit(1)
-		}
-
-		if !app.ObjectMeta.DeletionTimestamp.IsZero() {
-			fmt.Println("This app is being deleted. You can't update it.")
-			os.Exit(1)
-		}
-
-		if !app.Status.NewUpdateAvailable {
-			fmt.Println("There is no new update available for this app. You are already using the latest version.")
-			os.Exit(1)
-		}
-
-		app.Spec.Action = "update"
-		body, err := json.Marshal(app)
-		if err != nil {
-			fmt.Printf("Unable to marshall app's manifest - %v\n", err)
-			os.Exit(1)
-		}
-
-		err = clientset.RESTClient().
-			Patch(types.MergePatchType).
-			AbsPath(path).
-			Body(body).
-			Do(context.Background()).
-			Error()
+		err := updateApp(appName)
 		if err != nil {
 			fmt.Printf("Unable to update app - %v\n", err)
 			os.Exit(1)

@@ -20,20 +20,21 @@ import (
 	"os"
 	"strings"
 
-	utils "github.com/civo/bizaar/pkg/utils"
+	utils "github.com/kubemart/kubemart/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 // systemUpgradeCmd represents the systemUpgrade command
 var systemUpgradeCmd = &cobra.Command{
-	Use:   "system-upgrade",
-	Short: "Upgrade Bizaar CRDs and operator to latest version",
+	Use:     "system-upgrade",
+	Example: "kubemart system-upgrade",
+	Short:   "Upgrade Kubemart operator to latest version",
 	Run: func(cmd *cobra.Command, args []string) {
 		// TODO - change this after we go live
 		manifests := strings.Split(operatorYAML, "---")
-		err := utils.ApplyOperatorManifest(manifests)
+		err := utils.ApplyManifests(manifests)
 		if err != nil {
-			fmt.Printf("Unable to deploy operator - %v\n", err.Error())
+			fmt.Printf("Unable to apply manifest upgrade - %v\n", err.Error())
 			os.Exit(1)
 		}
 

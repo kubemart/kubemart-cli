@@ -16,26 +16,26 @@ limitations under the License.
 package cmd
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 
-	operator "github.com/civo/bizaar-operator/api/v1alpha1"
-	utils "github.com/civo/bizaar/pkg/utils"
 	"github.com/forestgiant/sliceutil"
+	utils "github.com/kubemart/kubemart/pkg/utils"
 	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Plan is used for selected apps i.e. mariadb
 var Plan int
 
+// When this is true, do not print post-install message
+var hidePostInstall bool
+
 // installCmd represents the install command
 var installCmd = &cobra.Command{
-	Use:   "install APP_NAME",
-	Short: "Install an application",
-	Args:  cobra.MinimumNArgs(1),
+	Use:     "install APP_NAME",
+	Example: "kubemart install rabbitmq",
+	Short:   "Install an application",
+	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		appName := args[0]
 		if appName == "" {
@@ -76,48 +76,15 @@ var installCmd = &cobra.Command{
 			utils.DebugPrintf("Plan to proceed with: %d\n", Plan)
 		}
 
-		app := &operator.App{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "bizaar.civo.com/v1alpha1",
-				Kind:       "App",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      appName,
-				Namespace: "bizaar-system",
-			},
-			Spec: operator.AppSpec{
-				Name:   appName,
-				Action: "install",
-				Plan:   Plan,
-			},
-		}
-
-		clientset, err := utils.GetKubeClientSet()
-		if err != nil {
-			fmt.Printf("Unable to create k8s clientset - %v\n", err)
-			os.Exit(1)
-		}
-
-		body, err := json.Marshal(app)
-		if err != nil {
-			fmt.Printf("Unable to marshall app's manifest - %v\n", err)
-			os.Exit(1)
-		}
-
-		wasCreated := false
-		res := clientset.RESTClient().
-			Post().
-			AbsPath("/apis/bizaar.civo.com/v1alpha1/namespaces/bizaar-system/apps").
-			Body(body).
-			Do(context.Background())
-
-		res = res.WasCreated(&wasCreated)
-		if wasCreated {
+		created, err := createApp(appName, Plan)
+		if created {
 			fmt.Println("App created successfully")
-			utils.RenderPostInstallMarkdown(appName)
+			if !hidePostInstall {
+				utils.RenderPostInstallMarkdown(appName)
+			}
 			os.Exit(0)
 		} else {
-			fmt.Printf("App creation failed - %+v\n", res.Error())
+			fmt.Printf("App creation failed - %+v\n", err.Error())
 			os.Exit(1)
 		}
 	},
@@ -125,7 +92,9 @@ var installCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(installCmd)
-	installCmd.Flags().IntVarP(&Plan, "plan", "p", 0, "Storage plan for the app (in GB) e.g. '5' for 5GB")
+	installCmd.Flags().IntVarP(&Plan, "plan", "p", 0, "storage plan for the app (in GB) e.g. '5' for 5GB")
+	installCmd.Flags().BoolVarP(&hidePostInstall, "quiet", "q", false, "do not show post-install message")
+
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command

@@ -16,75 +16,50 @@ limitations under the License.
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"text/tabwriter"
 
-	operator "github.com/civo/bizaar-operator/api/v1alpha1"
-	utils "github.com/civo/bizaar/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 // installedCmd represents the installed command
 var installedCmd = &cobra.Command{
-	Use:   "installed",
-	Short: "List all installed applications",
+	Use:     "installed",
+	Example: "kubemart installed",
+	Short:   "List all installed applications",
 	Run: func(cmd *cobra.Command, args []string) {
-		clientset, err := utils.GetKubeClientSet()
+		apps, err := listApps()
 		if err != nil {
-			fmt.Printf("Unable to create k8s clientset - %v\n", err)
+			fmt.Printf("%v\n", err)
 			os.Exit(1)
 		}
 
-		statusCode := 0
-		res := clientset.RESTClient().
-			Get().
-			AbsPath("/apis/bizaar.civo.com/v1alpha1").
-			Namespace("bizaar-system").
-			Resource("apps").
-			Do(context.Background())
-
-		res = res.StatusCode(&statusCode)
-		apps := &operator.AppList{}
-
-		if statusCode == 200 {
-			err = res.Into(apps)
-			if err != nil {
-				fmt.Printf("Unable parse app list - %v\n", err)
-				os.Exit(1)
-			}
-
-			if len(apps.Items) == 0 {
-				fmt.Println("No resources found")
-				os.Exit(0)
-			}
-
-			w := tabwriter.NewWriter(os.Stdout, 15, 0, 1, ' ', tabwriter.TabIndent)
-			fmt.Fprintln(w, "NAME\tCURRENT STATUS\tVERSION\tUPDATE AVAILABLE")
-			for _, app := range apps.Items {
-				currentStatus := fmt.Sprintf("\t%s", app.Status.LastStatus)
-				version := fmt.Sprintf("\t%s", app.Status.InstalledVersion)
-
-				updateAvailable := ""
-				if app.Status.InstalledVersion != "" {
-					if app.Status.NewUpdateAvailable {
-						updateAvailable = fmt.Sprintf("yes (%s)", app.Status.NewUpdateVersion)
-					} else {
-						updateAvailable = "no"
-					}
-				}
-				newUpdate := fmt.Sprintf("\t%s", updateAvailable)
-
-				fmt.Fprintln(w, app.Name, currentStatus, version, newUpdate)
-			}
-			w.Flush()
+		if len(apps.Items) == 0 {
+			fmt.Println("No resources found")
 			os.Exit(0)
-		} else {
-			fmt.Printf("Unable to list apps - %v\n", res.Error())
-			os.Exit(1)
 		}
 
+		w := tabwriter.NewWriter(os.Stdout, 15, 0, 1, ' ', tabwriter.TabIndent)
+		fmt.Fprintln(w, "NAME\tCURRENT STATUS\tVERSION\tUPDATE AVAILABLE")
+		for _, app := range apps.Items {
+			currentStatus := fmt.Sprintf("\t%s", app.Status.LastStatus)
+			version := fmt.Sprintf("\t%s", app.Status.InstalledVersion)
+
+			updateAvailable := ""
+			if app.Status.InstalledVersion != "" {
+				if app.Status.NewUpdateAvailable {
+					updateAvailable = fmt.Sprintf("yes (%s)", app.Status.NewUpdateVersion)
+				} else {
+					updateAvailable = "no"
+				}
+			}
+			newUpdate := fmt.Sprintf("\t%s", updateAvailable)
+
+			fmt.Fprintln(w, app.Name, currentStatus, version, newUpdate)
+		}
+		w.Flush()
+		os.Exit(0)
 	},
 }
 

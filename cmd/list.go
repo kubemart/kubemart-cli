@@ -17,11 +17,12 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/civo/bizaar/pkg/utils"
-	"github.com/spf13/cobra"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/kubemart/kubemart/pkg/utils"
+	"github.com/spf13/cobra"
 )
 
 // to store all folder names that we don't want e.g. "bin"
@@ -29,17 +30,18 @@ var excludeList map[string]bool
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all the apps that can be installed",
-	Long: `This command will display the list of all the applications that can be installed onto the Kubernetes cluster`,
+	Use:     "list",
+	Example: "kubemart list",
+	Short:   "List all the applications that can be installed",
+	Long:    `This command will display the list of all the applications that can be installed onto the Kubernetes cluster`,
 	Run: func(cmd *cobra.Command, args []string) {
 		excludeList = make(map[string]bool)
 		excludeList["bin"] = true
-		dir, _ := utils.GetBizaarPaths()
+		dir, _ := utils.GetKubemartPaths()
 		path := dir.AppsDirectoryPath
 		files, err := ioutil.ReadDir(path)
 		if err != nil {
-			fmt.Print("Unable parse get list of files - %v", err)
+			fmt.Printf("Unable parse get list of files - %v", err)
 			os.Exit(1)
 		}
 		apps := []string{}
@@ -48,7 +50,7 @@ var listCmd = &cobra.Command{
 			filePath := fmt.Sprintf("%s/%s", path, fileName)
 			fileInfo, err := os.Stat(filePath)
 			if err != nil {
-				fmt.Print("Unable to locate file - %v", err)
+				fmt.Printf("Unable to locate file - %v", err)
 				os.Exit(1)
 			}
 			if fileInfo.IsDir() && isValid(fileName) {
@@ -58,6 +60,7 @@ var listCmd = &cobra.Command{
 		fmt.Println(strings.Join(apps, "\n"))
 	},
 }
+
 func isValid(folderName string) bool {
 	isHidden := isHidden(folderName)
 	if isHidden {
@@ -80,7 +83,6 @@ func isHidden(folderName string) bool {
 	return false
 }
 
-
 func init() {
 	rootCmd.AddCommand(listCmd)
 
@@ -94,4 +96,3 @@ func init() {
 	// is called directly, e.g.:
 	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
-

@@ -16,19 +16,19 @@ limitations under the License.
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"os"
 
-	utils "github.com/civo/bizaar/pkg/utils"
+	utils "github.com/kubemart/kubemart/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 // uninstallCmd represents the uninstall command
 var uninstallCmd = &cobra.Command{
-	Use:   "uninstall",
-	Short: "Uninstall an application",
-	Args:  cobra.MinimumNArgs(1),
+	Use:     "uninstall APP_NAME",
+	Example: "kubemart uninstall rabbitmq",
+	Short:   "Uninstall an application",
+	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		appName := args[0]
 		if appName == "" {
@@ -37,25 +37,20 @@ var uninstallCmd = &cobra.Command{
 		}
 		utils.DebugPrintf("App name to uninstall: %s\n", appName)
 
-		clientset, err := utils.GetKubeClientSet()
+		err := deleteApp(appName)
 		if err != nil {
-			fmt.Printf("Unable to create k8s clientset - %v\n", err)
+			fmt.Printf("%v\n", err)
 			os.Exit(1)
 		}
 
-		path := fmt.Sprintf("/apis/bizaar.civo.com/v1alpha1/namespaces/bizaar-system/apps/%s", appName)
-		res := clientset.RESTClient().
-			Delete().
-			AbsPath(path).
-			Do(context.Background())
-
-		if res.Error() != nil {
-			fmt.Printf("Unable to delete %s app - %v\n", appName, res.Error())
+		if err != nil {
+			fmt.Printf("Unable to delete %s app - %v\n", appName, err)
 			os.Exit(1)
-		} else {
-			fmt.Printf("%s app is now scheduled to be deleted\n", appName)
-			os.Exit(0)
 		}
+
+		fmt.Printf("%s app is now scheduled to be deleted\n", appName)
+		os.Exit(0)
+
 	},
 }
 

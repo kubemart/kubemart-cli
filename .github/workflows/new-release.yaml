@@ -21,18 +21,18 @@ jobs:
 
       - name: Set up Go Modules
         env:
-          GOPRIVATE: github.com/civo/bizaar-operator
+          GOPRIVATE: github.com/kubemart/kubemart-operator
         run: |
           git config --global url."https://${{ secrets.GH_USERNAME }}:${{ secrets.GH_TOKEN }}@github.com".insteadOf "https://github.com"
 
       # TODO - change this after we go live
-      - name: Download bizaar-operator manifest
+      - name: Download kubemart-operator manifest
         uses: dsaltares/fetch-gh-release-asset@939be9e72e81fe7009b6112bc96abde38bf7b68f
         with:
-          repo: "civo/bizaar-operator"
+          repo: "kubemart/kubemart-operator"
           version: "latest"
-          file: "bizaar-operator.yaml"
-          target: "cmd/manifests/bizaar-operator.yaml"
+          file: "kubemart-operator.yaml"
+          target: "cmd/manifests/kubemart-operator.yaml"
           token: ${{ secrets.GH_TOKEN }}
 
       - name: Build and release

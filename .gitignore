@@ -1,2 +1,2 @@
-bizaar
-cmd/manifests/bizaar-operator.yaml
+kubemart
+cmd/manifests/kubemart-operator.yaml

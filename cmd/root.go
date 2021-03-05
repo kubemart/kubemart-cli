@@ -19,24 +19,26 @@ import (
 	"fmt"
 	"os"
 
-	utils "github.com/civo/bizaar/pkg/utils"
+	utils "github.com/kubemart/kubemart/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 var kubeCfgFile string
+var debug bool
 var canSkipUpdateApps map[string]bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "bizaar",
-	Short: "",
+	Use: "kubemart",
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		canSkipUpdateApps = make(map[string]bool)
+		canSkipUpdateApps["destroy"] = true
+		canSkipUpdateApps["help"] = true
 		canSkipUpdateApps["init"] = true
-		canSkipUpdateApps["version"] = true
 		canSkipUpdateApps["system-upgrade"] = true
+		canSkipUpdateApps["version"] = true
 
 		_, found := canSkipUpdateApps[cmd.Name()]
 		if !found {
@@ -55,21 +57,29 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(replaceKubeconfigEnvIfFlagIsPresent)
-
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&kubeCfgFile, "kubeconfig", "", "kubeconfig file")
-
+	rootCmd.PersistentFlags().StringVarP(&kubeCfgFile, "kubeconfig", "k", "", "kubeconfig file")
+	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "print verbose logs when running command")
+	rootCmd.SetHelpCommand(&cobra.Command{Use: "no-help", Hidden: true}) // disable "kubemart help <command>"
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
+	cobra.OnInitialize(replaceKubeconfigEnvIfFlagIsPresent)
+	cobra.OnInitialize(setLogLevelEnvIfFlagIsTrue)
 }
 
 func replaceKubeconfigEnvIfFlagIsPresent() {
 	if kubeCfgFile != "" {
 		os.Setenv("KUBECONFIG", kubeCfgFile)
+	}
+}
+
+func setLogLevelEnvIfFlagIsTrue() {
+	if debug {
+		os.Setenv("LOGLEVEL", "debug")
 	}
 }
