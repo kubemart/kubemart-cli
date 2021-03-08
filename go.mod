@@ -5,8 +5,12 @@ go 1.16
 require (
 	github.com/charmbracelet/glamour v0.2.0
 	github.com/forestgiant/sliceutil v0.0.0-20160425183142-94783f95db6c
+	github.com/google/go-github v17.0.0+incompatible // indirect
+	github.com/google/go-querystring v1.0.0 // indirect
+	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/kubemart/kubemart-operator v0.0.45
 	github.com/spf13/cobra v1.1.1
+	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.20.4
 	k8s.io/apiextensions-apiserver v0.18.6

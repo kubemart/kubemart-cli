@@ -31,10 +31,6 @@ var Email string
 // DomainName is used for KUBEMART:DOMAIN_NAME
 var DomainName string
 
-// TODO - change this after we go live
-//go:embed manifests/kubemart-operator.yaml
-var operatorYAML string
-
 // initCmd represents the init command
 var initCmd = &cobra.Command{
 	Use:     "init",
@@ -144,8 +140,13 @@ var initCmd = &cobra.Command{
 			}
 		}
 
-		// TODO - change this after we go live
 		fmt.Println("Applying manifests...")
+		operatorYAML, err := utils.GetLatestManifests()
+		if err != nil {
+			fmt.Printf("Unable to download latest manifests - %v\n", err.Error())
+			os.Exit(1)
+		}
+
 		manifests := strings.Split(operatorYAML, "---")
 		err = utils.ApplyManifests(manifests)
 		if err != nil {

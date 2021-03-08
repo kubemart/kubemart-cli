@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -79,6 +81,11 @@ type KubemartPaths struct {
 	RootDirectoryPath string
 	AppsDirectoryPath string
 	ConfigFilePath    string
+}
+
+// LatestGitHubReleaseResponse ...
+type LatestGitHubReleaseResponse struct {
+	TagName string `json:"tag_name"`
 }
 
 // GetKubemartPaths returns KubemartPaths struct
@@ -301,12 +308,17 @@ func IsNamespaceExist(namespace string) (bool, error) {
 	}
 
 	nsClient := clientset.CoreV1().Namespaces()
-	_, err = nsClient.Get(context.Background(), namespace, metav1.GetOptions{})
+	ns, err := nsClient.Get(context.Background(), namespace, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return false, nil
 		}
 		return false, err
+	}
+
+	if !ns.DeletionTimestamp.IsZero() {
+		DebugPrintf("%s namespace is being terminated\n", namespace)
+		return false, nil
 	}
 
 	return true, nil
@@ -929,4 +941,52 @@ func IsAppExist(appName string) bool {
 		return true
 	}
 	return false
+}
+
+// GetLatestOperatorReleaseVersion ...
+func GetLatestOperatorReleaseVersion() (string, error) {
+	response, err := http.Get("https://api.github.com/repos/kubemart/kubemart-operator/releases/latest")
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var latestRelease LatestGitHubReleaseResponse
+	json.Unmarshal(resp, &latestRelease)
+
+	return latestRelease.TagName, nil
+}
+
+// GetLatestManifests ...
+func GetLatestManifests() (string, error) {
+	var manifests string
+
+	latestVersion, err := GetLatestOperatorReleaseVersion()
+	if err != nil {
+		return manifests, err
+	}
+
+	url := fmt.Sprintf("https://github.com/kubemart/kubemart-operator/releases/download/%s/kubemart-operator.yaml", latestVersion)
+	response, err := http.Get(url)
+	if err != nil {
+		return manifests, err
+	}
+	defer response.Body.Close()
+
+	buf := new(bytes.Buffer)
+	n, err := io.Copy(buf, response.Body)
+	if err != nil {
+		return manifests, err
+	}
+
+	if n == 0 {
+		return manifests, fmt.Errorf("Manifests are empty")
+	}
+
+	manifests = buf.String()
+	return manifests, nil
 }

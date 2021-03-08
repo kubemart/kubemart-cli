@@ -30,9 +30,14 @@ var systemUpgradeCmd = &cobra.Command{
 	Example: "kubemart system-upgrade",
 	Short:   "Upgrade Kubemart operator to latest version",
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO - change this after we go live
+		operatorYAML, err := utils.GetLatestManifests()
+		if err != nil {
+			fmt.Printf("Unable to download latest manifests - %v\n", err.Error())
+			os.Exit(1)
+		}
+
 		manifests := strings.Split(operatorYAML, "---")
-		err := utils.ApplyManifests(manifests)
+		err = utils.ApplyManifests(manifests)
 		if err != nil {
 			fmt.Printf("Unable to apply manifest upgrade - %v\n", err.Error())
 			os.Exit(1)

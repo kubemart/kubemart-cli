@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"runtime"
+	"strings"
 
 	"github.com/kubemart/kubemart/pkg/utils"
 	"github.com/spf13/cobra"
+	"github.com/tcnksm/go-latest"
 )
 
 var (
@@ -27,12 +30,11 @@ var (
 		Short:   "Output the current build information",
 		Run: func(cmd *cobra.Command, args []string) {
 
-			// TODO - uncomment this after we go live
-			// githubTag := &latest.GithubTag{
-			// 	Owner:             "kubemart",
-			// 	Repository:        "kubemart-cli",
-			// 	FixVersionStrFunc: latest.DeleteFrontV(),
-			// }
+			githubTag := &latest.GithubTag{
+				Owner:             "kubemart",
+				Repository:        "kubemart-operator",
+				FixVersionStrFunc: latest.DeleteFrontV(),
+			}
 			switch {
 			case verbose:
 				fmt.Printf("Client version: v%s\n", VersionCli)
@@ -66,31 +68,29 @@ var (
 				}
 				fmt.Printf("Namespace (kubemart-system) status: %s\n", namespaceStatus)
 
-				// TODO - uncomment this after we go live
-				// res, err := latest.Check(githubTag, strings.Replace(VersionCli, "v", "", 1))
-				// if err != nil {
-				// 	utility.Error("Checking for a newer version failed with %s", err)
-				// 	os.Exit(1)
-				// }
+				res, err := latest.Check(githubTag, strings.Replace(VersionCli, "v", "", 1))
+				if err != nil {
+					fmt.Printf("Checking for a newer version failed with %s\n", err)
+					os.Exit(1)
+				}
 
-				// if res.Outdated {
-				// 	utility.RedConfirm("A newer version (v%s) is available, please upgrade\n", res.Current)
-				// }
+				if res.Outdated {
+					fmt.Printf("\nFYI, a newer version (v%s) is available, please upgrade\n", res.Current)
+				}
 			case quiet:
 				fmt.Printf("v%s\n", VersionCli)
 			default:
 				fmt.Printf("v%s\n", VersionCli)
 
-				// TODO - uncomment this after we go live
-				// res, err := latest.Check(githubTag, strings.Replace(VersionCli, "v", "", 1))
-				// if err != nil {
-				// 	utility.Error("Checking for a newer version failed with %s", err)
-				// 	os.Exit(1)
-				// }
+				res, err := latest.Check(githubTag, strings.Replace(VersionCli, "v", "", 1))
+				if err != nil {
+					fmt.Printf("Checking for a newer version failed with %s\n", err)
+					os.Exit(1)
+				}
 
-				// if res.Outdated {
-				// 	utility.RedConfirm("A newer version (v%s) is available, please upgrade\n", res.Current)
-				// }
+				if res.Outdated {
+					fmt.Printf("\nFYI, a newer version (v%s) is available, please upgrade\n", res.Current)
+				}
 			}
 		},
 	}

@@ -60,7 +60,12 @@ var destroyCmd = &cobra.Command{
 
 		fmt.Println("All apps have been deleted")
 		fmt.Println("Deleting kubemart Kubernetes objects (operator, CRDs & etc)...")
-		// TODO - change this after we go live
+		operatorYAML, err := utils.GetLatestManifests()
+		if err != nil {
+			fmt.Printf("Unable to download latest manifests - %v\n", err.Error())
+			os.Exit(1)
+		}
+
 		manifests := strings.Split(operatorYAML, "---")
 		err = utils.DeleteManifests(manifests)
 		if err != nil {
@@ -74,7 +79,7 @@ var destroyCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(destroyCmd)
-	destroyCmd.Flags().BoolVarP(&proceedWithoutPrompt, "yes", "y", false, "skip interactive y/n prompt")
+	destroyCmd.Flags().BoolVarP(&proceedWithoutPrompt, "yes", "y", false, "skip interactive y/n prompt by answering 'y'")
 
 	// Here you will define your flags and configuration settings.
 
