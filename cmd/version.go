@@ -32,7 +32,7 @@ var (
 
 			githubTag := &latest.GithubTag{
 				Owner:             "kubemart",
-				Repository:        "kubemart-operator",
+				Repository:        "kubemart-cli",
 				FixVersionStrFunc: latest.DeleteFrontV(),
 			}
 			switch {
@@ -75,7 +75,7 @@ var (
 				}
 
 				if res.Outdated {
-					fmt.Printf("\nFYI, a newer version (v%s) is available, please upgrade\n", res.Current)
+					fmt.Printf("\nFYI, a newer Kubemart CLI version (v%s) is available, please upgrade\n", res.Current)
 				}
 			case quiet:
 				fmt.Printf("v%s\n", VersionCli)
@@ -89,7 +89,7 @@ var (
 				}
 
 				if res.Outdated {
-					fmt.Printf("\nFYI, a newer version (v%s) is available, please upgrade\n", res.Current)
+					fmt.Printf("\nFYI, a newer Kubemart CLI version (v%s) is available, please upgrade\n", res.Current)
 				}
 			}
 		},
