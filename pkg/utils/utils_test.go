@@ -11,11 +11,46 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func TestGetKubemartPaths1(t *testing.T) {
+	homeDir, _ := os.UserHomeDir()
+	kp, _ := GetKubemartPaths()
+
+	expectedRootDirectoryPath := fmt.Sprintf("%s/.kubemart", homeDir)
+	actualRootDirectoryPath := kp.RootDirectoryPath
+	if expectedRootDirectoryPath != actualRootDirectoryPath {
+		t.Errorf("Expected %s but actual is %s", expectedRootDirectoryPath, actualRootDirectoryPath)
+	}
+}
+
+func TestGetKubemartPaths2(t *testing.T) {
+	homeDir, _ := os.UserHomeDir()
+	kp, _ := GetKubemartPaths()
+
+	expectedAppsDirectoryPath := fmt.Sprintf("%s/.kubemart/apps", homeDir)
+	actualAppsDirectoryPath := kp.AppsDirectoryPath
+	if expectedAppsDirectoryPath != actualAppsDirectoryPath {
+		t.Errorf("Expected %s but actual is %s", expectedAppsDirectoryPath, actualAppsDirectoryPath)
+	}
+}
+
+func TestGetKubemartPaths3(t *testing.T) {
+	homeDir, _ := os.UserHomeDir()
+	kp, _ := GetKubemartPaths()
+
+	expectedConfigFilePath := fmt.Sprintf("%s/.kubemart/config.json", homeDir)
+	actualConfigFilePath := kp.ConfigFilePath
+	if expectedConfigFilePath != actualConfigFilePath {
+		t.Errorf("Expected %s but actual is %s", expectedConfigFilePath, actualConfigFilePath)
+	}
+}
+
+// --------------------------------------------------
+
 func TestGetNodesFromKubeconfigVariableSingle(t *testing.T) {
 	// define KUBECONFIG and context
 	homeDir, _ := os.UserHomeDir()
-	kubeConfigPath := fmt.Sprintf("%s/k3d/cluster-1.yaml", homeDir)
-	contextName := "k3d-cluster-1-context"
+	kubeConfigPath := fmt.Sprintf("%s/kind/cluster-1.yaml", homeDir)
+	contextName := "kind-cluster-1"
 
 	// set KUBECONFIG and context
 	os.Setenv("KUBECONFIG", kubeConfigPath)
@@ -33,13 +68,20 @@ func TestGetNodesFromKubeconfigVariableSingle(t *testing.T) {
 		t.Error(err)
 	}
 
-	for i, node := range nodes.Items {
-		fmt.Printf("Node #%d: %s\n", i, node.Name)
+	var actual string
+	for _, node := range nodes.Items {
+		actual = node.Name
+		break
+	}
+
+	expected := "cluster-1-control-plane"
+	if expected != actual {
+		t.Errorf("Expected %s but actual is %s", expected, actual)
 	}
 
 	// cleanup
 	os.Unsetenv("KUBECONFIG")
-	cmd = exec.Command("kubectl", "config", "use-context", "minikube")
+	cmd = exec.Command("kubectl", "config", "use-context", "kind-default")
 	_ = cmd.Run()
 }
 
@@ -48,10 +90,10 @@ func TestGetNodesFromKubeconfigVariableMultiples(t *testing.T) {
 	// For testing purpose, use absolute path to kubeconfig.
 	// In real live, user's terminal will expand the "~" or "$HOME".
 	homeDir, _ := os.UserHomeDir()
-	kubeConfigPath1 := fmt.Sprintf("%s/k3d/cluster-1.yaml", homeDir)
+	kubeConfigPath1 := fmt.Sprintf("%s/kind/cluster-1.yaml", homeDir)
 	fmt.Println("Kubeconfig path:", kubeConfigPath1)
 
-	kubeConfigPath2 := fmt.Sprintf("%s/k3d/cluster-2.yaml", homeDir)
+	kubeConfigPath2 := fmt.Sprintf("%s/kind/cluster-2.yaml", homeDir)
 	fmt.Println("Kubeconfig path:", kubeConfigPath2)
 
 	kubeConfigPaths := fmt.Sprintf("%s:%s", kubeConfigPath1, kubeConfigPath2)
@@ -59,7 +101,7 @@ func TestGetNodesFromKubeconfigVariableMultiples(t *testing.T) {
 	fmt.Println("KUBECONFIG:", os.Getenv("KUBECONFIG"))
 
 	// switch context to cluster-2
-	out, err := exec.Command("kubectl", "config", "use-context", "k3d-cluster-2-context").Output()
+	out, err := exec.Command("kubectl", "config", "use-context", "kind-cluster-2").Output()
 	if err != nil {
 		t.Error(err)
 	}
@@ -76,13 +118,20 @@ func TestGetNodesFromKubeconfigVariableMultiples(t *testing.T) {
 		t.Error(err)
 	}
 
-	for i, node := range nodes.Items {
-		fmt.Printf("Node #%d: %s\n", i, node.Name)
+	var actual string
+	for _, node := range nodes.Items {
+		actual = node.Name
+		break
+	}
+
+	expected := "cluster-2-control-plane"
+	if expected != actual {
+		t.Errorf("Expected %s but actual is %s", expected, actual)
 	}
 
 	// cleanup
 	os.Unsetenv("KUBECONFIG")
-	cmd := exec.Command("kubectl", "config", "use-context", "minikube")
+	cmd := exec.Command("kubectl", "config", "use-context", "kind-default")
 	_ = cmd.Run()
 }
 
@@ -93,8 +142,8 @@ func TestGetNodesFromKubeconfigFlag(t *testing.T) {
 
 	// define KUBECONFIG and context
 	homeDir, _ := os.UserHomeDir()
-	kubeConfigPath := fmt.Sprintf("%s/k3d/cluster-2.yaml", homeDir)
-	contextName := "k3d-cluster-2-context"
+	kubeConfigPath := fmt.Sprintf("%s/kind/cluster-2.yaml", homeDir)
+	contextName := "kind-cluster-2"
 
 	// set KUBECONFIG and context
 	os.Setenv("KUBECONFIG", kubeConfigPath)
@@ -112,13 +161,20 @@ func TestGetNodesFromKubeconfigFlag(t *testing.T) {
 		t.Error(err)
 	}
 
-	for i, node := range nodes.Items {
-		fmt.Printf("Node #%d: %s\n", i, node.Name)
+	var actual string
+	for _, node := range nodes.Items {
+		actual = node.Name
+		break
+	}
+
+	expected := "cluster-2-control-plane"
+	if expected != actual {
+		t.Errorf("Expected %s but actual is %s", expected, actual)
 	}
 
 	// cleanup
 	os.Unsetenv("KUBECONFIG")
-	cmd = exec.Command("kubectl", "config", "use-context", "minikube")
+	cmd = exec.Command("kubectl", "config", "use-context", "kind-default")
 	_ = cmd.Run()
 }
 
@@ -137,10 +193,16 @@ func TestGetNodesFromDefaultKubeconfig(t *testing.T) {
 		t.Error(err)
 	}
 
-	for i, node := range nodes.Items {
-		fmt.Printf("Node #%d: %s\n", i, node.Name)
+	var actual string
+	for _, node := range nodes.Items {
+		actual = node.Name
+		break
 	}
 
+	expected := "default-control-plane"
+	if expected != actual {
+		t.Errorf("Expected %s but actual is %s", expected, actual)
+	}
 }
 
 // --------------------------------------------------
@@ -194,7 +256,7 @@ func TestGetContextAndClusterFromKubeconfigFlag(t *testing.T) {
 	// For testing purpose, use absolute path to kubeconfig.
 	// In real live, user's terminal will expand the "~" or "$HOME".
 	homeDir, _ := os.UserHomeDir()
-	kubeconfigPath := fmt.Sprintf("%s/k3d/cluster-2.yaml", homeDir)
+	kubeconfigPath := fmt.Sprintf("%s/kind/cluster-2.yaml", homeDir)
 	fmt.Println("Kubeconfig path:", kubeconfigPath)
 	os.Setenv("KUBECONFIG", kubeconfigPath)
 
@@ -220,10 +282,10 @@ func TestGetContextAndClusterFromKubeconfigEnv(t *testing.T) {
 	// For testing purpose, use absolute path to kubeconfig.
 	// In real live, user's terminal will expand the "~" or "$HOME".
 	homeDir, _ := os.UserHomeDir()
-	kubeConfigPath1 := fmt.Sprintf("%s/k3d/cluster-1.yaml", homeDir)
+	kubeConfigPath1 := fmt.Sprintf("%s/kind/cluster-1.yaml", homeDir)
 	fmt.Println("Kubeconfig path:", kubeConfigPath1)
 
-	kubeConfigPath2 := fmt.Sprintf("%s/k3d/cluster-2.yaml", homeDir)
+	kubeConfigPath2 := fmt.Sprintf("%s/kind/cluster-2.yaml", homeDir)
 	fmt.Println("Kubeconfig path:", kubeConfigPath2)
 
 	kubeConfigPaths := fmt.Sprintf("%s:%s", kubeConfigPath1, kubeConfigPath2)
@@ -231,7 +293,7 @@ func TestGetContextAndClusterFromKubeconfigEnv(t *testing.T) {
 	fmt.Println("KUBECONFIG:", os.Getenv("KUBECONFIG"))
 
 	// switch context to cluster-2
-	out, err := exec.Command("kubectl", "config", "use-context", "k3d-cluster-2-context").Output()
+	out, err := exec.Command("kubectl", "config", "use-context", "kind-cluster-2").Output()
 	if err != nil {
 		t.Error(err)
 	}
