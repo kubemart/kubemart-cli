@@ -10,6 +10,7 @@ require (
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/kubemart/kubemart-operator v0.0.46
 	github.com/spf13/cobra v1.1.1
+	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.20.4

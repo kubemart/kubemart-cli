@@ -105,106 +105,6 @@ func GetKubemartPaths() (*KubemartPaths, error) {
 	return bp, nil
 }
 
-// GetAppNamespace ...
-func GetAppNamespace(appName string) (string, error) {
-	bp, err := GetKubemartPaths()
-	if err != nil {
-		return "", err
-	}
-
-	appManifestPath := fmt.Sprintf("%s/%s/manifest.yaml", bp.AppsDirectoryPath, appName)
-	file, err := ioutil.ReadFile(appManifestPath)
-	if err != nil {
-		return "", err
-	}
-
-	manifest := AppManifest{}
-	err = yaml.Unmarshal(file, &manifest)
-	if err != nil {
-		return "", err
-	}
-
-	ns := manifest.Namespace
-	return ns, nil
-}
-
-// GetAppDependencies will fetch app's dependencies and return in slice type
-func GetAppDependencies(appName string) ([]string, error) {
-	dependencies := []string{}
-	bp, err := GetKubemartPaths()
-	if err != nil {
-		return dependencies, err
-	}
-
-	appManifestPath := fmt.Sprintf("%s/%s/manifest.yaml", bp.AppsDirectoryPath, appName)
-	file, err := ioutil.ReadFile(appManifestPath)
-	if err != nil {
-		return dependencies, err
-	}
-
-	manifest := AppManifest{}
-	err = yaml.Unmarshal(file, &manifest)
-	if err != nil {
-		return dependencies, err
-	}
-
-	for _, dependency := range manifest.Dependencies {
-		dep := strings.ToLower(dependency)
-		cleaned, err := SanitizeDependencyName(dep)
-		if err != nil {
-			return dependencies, fmt.Errorf("Unable to sanitize %s", dep)
-		}
-		dependencies = append(dependencies, cleaned)
-	}
-
-	return dependencies, nil
-}
-
-// GetAppPlans returns sorted app plans e.g. [5,10,20]
-func GetAppPlans(appName string) ([]int, error) {
-	plans := []int{}
-	bp, err := GetKubemartPaths()
-	if err != nil {
-		return plans, err
-	}
-
-	appManifestPath := fmt.Sprintf("%s/%s/manifest.yaml", bp.AppsDirectoryPath, appName)
-	file, err := ioutil.ReadFile(appManifestPath)
-	if err != nil {
-		return plans, err
-	}
-
-	manifest := AppManifest{}
-	err = yaml.Unmarshal(file, &manifest)
-	if err != nil {
-		return plans, err
-	}
-
-	for _, plan := range manifest.Plans {
-		conf := plan.Configuration
-		keys := reflect.ValueOf(conf).MapKeys()
-		strKeys := make([]string, len(keys))
-		for i := 0; i < len(keys); i++ {
-			strKeys[i] = keys[i].String()
-		}
-
-		for _, key := range strKeys {
-			p := ExtractPlanIntFromPlanStr(conf[key].Value)
-			if p > 0 {
-				plans = append(plans, p)
-			}
-		}
-	}
-
-	sort.Ints(plans)
-	return plans, nil
-}
-
-// GetSmallestAppPlan take plans slice e.g. [20,5,10] and return 5 (int)
-func GetSmallestAppPlan(sortedPlans []int) int {
-	return sortedPlans[0]
-}
-
 // GetKubeClientSet reads default k8s context and return k8s client of it.
 // Loading order as follows:
 // * If "--kubeconfig" flag was supplied, create k8s client from it
@@ -363,33 +263,6 @@ func DeleteNamespace(namespace string) error {
 	return err
 }
 
-// RenderPostInstallMarkdown will fetch app's post_install.md and render to user's stdout
-func RenderPostInstallMarkdown(appName string) {
-	bp, err := GetKubemartPaths()
-	if err != nil {
-		fmt.Printf("Unable to get kubemart paths - %v\n", err.Error())
-		os.Exit(1)
-	}
-
-	appManifestPath := filepath.Join(bp.AppsDirectoryPath, appName, "post_install.md")
-	DebugPrintf("App post install file - %s\n", appManifestPath)
-	file, err := ioutil.ReadFile(appManifestPath)
-	if err != nil {
-		fmt.Printf("Unable to load post-install notes for this app - %v\n", err.Error())
-		os.Exit(1)
-	}
-
-	if runtime.GOOS == "windows" {
-		fmt.Println(string(file))
-	} else {
-		out, err := glamour.Render(string(file), "dark")
-		if err == nil {
-			fmt.Println("App post-install notes:")
-			fmt.Println(out)
-		}
-	}
-}
-
 // DebugPrintf is used to print debug messages (useful during development)
 func DebugPrintf(format string, a ...interface{}) (n int, err error) {
 	logLevel := os.Getenv("LOGLEVEL")
@@ -435,6 +308,31 @@ func GitClone(directory string) (string, error) {
 	return cloneOutput, nil
 }
 
+// UpdateConfigFileLastUpdatedTimestamp will update timestamp field of ~/.kubemart/config.json file
+func UpdateConfigFileLastUpdatedTimestamp() error {
+	bp, err := GetKubemartPaths()
+	if err != nil {
+		return err
+	}
+
+	configFilePath := bp.ConfigFilePath
+	config := &KubemartConfigFile{
+		AppsLastUpdatedAt: time.Now().Unix(),
+	}
+
+	file, err := json.MarshalIndent(config, "", " ")
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(configFilePath, file, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // GitPull will run `git pull` in the context of given directory
 func GitPull(directory string) (string, error) {
 	args := []string{
@@ -474,62 +372,41 @@ func GetConfigFileLastUpdatedTimestamp() int64 {
 	return config.AppsLastUpdatedAt
 }
 
-// UpdateConfigFileLastUpdatedTimestamp will update timestamp field of ~/.kubemart/config.json file
-func UpdateConfigFileLastUpdatedTimestamp() error {
-	bp, err := GetKubemartPaths()
-	if err != nil {
-		return err
-	}
-
-	configFilePath := bp.ConfigFilePath
-	config := &KubemartConfigFile{
-		AppsLastUpdatedAt: time.Now().Unix(),
-	}
-
-	file, err := json.MarshalIndent(config, "", " ")
-	if err != nil {
-		return err
-	}
-
-	err = ioutil.WriteFile(configFilePath, file, 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // UpdateAppsCacheIfStale will run `git pull` in the context of ~/.kubemart/apps folder
 // and update the timestamp field in the ~/.kubemart/config.json file
-func UpdateAppsCacheIfStale() {
+func UpdateAppsCacheIfStale() (bool, error) {
 	lastUpdated := GetConfigFileLastUpdatedTimestamp()
 	now := time.Now().Unix()
 	diff := now - lastUpdated
-
 	allowedSeconds := int64(60 * allowedMinutes)
-	if diff > allowedSeconds {
-		bp, err := GetKubemartPaths()
-		if err != nil {
-			fmt.Printf("Unable to load kubemart paths - %v\n", err)
-			os.Exit(1)
-		}
 
-		appsFolder := bp.AppsDirectoryPath
-		pullOutput, err := GitPull(appsFolder)
-		if err != nil {
-			fmt.Printf("Unable to Git pull latest apps - %v\n", err)
-			fmt.Printf("You may need to run 'kubemart init' command to resolve this problem\n")
-			os.Exit(1)
-		}
-		DebugPrintf("Pull output: %+v\n", pullOutput)
-
-		err = UpdateConfigFileLastUpdatedTimestamp()
-		if err != nil {
-			fmt.Printf("Unable to config file's timestamp field - %v\n", err)
-			os.Exit(1)
-		}
-		DebugPrintf("Config file's timestamp field updated successfully\n")
+	// when the apps are fresh
+	if diff < allowedSeconds {
+		return true, nil
 	}
+
+	// when the apps are outdated
+	bp, err := GetKubemartPaths()
+	if err != nil {
+		return false, fmt.Errorf("Unable to load kubemart paths - %v", err)
+	}
+
+	appsFolder := bp.AppsDirectoryPath
+	pullOutput, err := GitPull(appsFolder)
+	if err != nil {
+		errMsgTemplate := "Unable to Git pull latest apps - %v\n"
+		errMsgTemplate += "The 'kubemart init' command may solve this problem"
+		return false, fmt.Errorf(errMsgTemplate, err)
+	}
+	DebugPrintf("Pull output: %+v\n", pullOutput)
+
+	err = UpdateConfigFileLastUpdatedTimestamp()
+	if err != nil {
+		return false, fmt.Errorf("Unable to config file's timestamp field - %v", err)
+	}
+
+	DebugPrintf("Config file's timestamp field updated successfully")
+	return true, nil
 }
 
 // GitLatestCommitHash will return the last commit (short version) from Git folder
@@ -548,6 +425,77 @@ func GitLatestCommitHash(directory string) (string, error) {
 		return "", err
 	}
 	return string(out), nil
+}
+
+// GetPostInstallMarkdown will fetch app's post_install.md and return it
+func GetPostInstallMarkdown(appName string) (string, error) {
+	bp, err := GetKubemartPaths()
+	if err != nil {
+		return "", fmt.Errorf("Unable to get kubemart paths - %v", err.Error())
+	}
+
+	appManifestPath := filepath.Join(bp.AppsDirectoryPath, appName, "post_install.md")
+	DebugPrintf("App post install file - %s\n", appManifestPath)
+	file, err := ioutil.ReadFile(appManifestPath)
+	if err != nil {
+		return "", fmt.Errorf("Unable to load post-install notes for this app - %v", err.Error())
+	}
+
+	if runtime.GOOS == "windows" {
+		return string(file), nil
+	}
+
+	out, err := glamour.Render(string(file), "dark")
+	if err != nil {
+		return out, fmt.Errorf("Unable to format the post-install - %v", err.Error())
+	}
+
+	return out, nil
+}
+
+// GetAppPlans returns sorted app plans e.g. [5,10,20]
+func GetAppPlans(appName string) ([]int, error) {
+	plans := []int{}
+	bp, err := GetKubemartPaths()
+	if err != nil {
+		return plans, err
+	}
+
+	appManifestPath := fmt.Sprintf("%s/%s/manifest.yaml", bp.AppsDirectoryPath, appName)
+	file, err := ioutil.ReadFile(appManifestPath)
+	if err != nil {
+		return plans, err
+	}
+
+	manifest := AppManifest{}
+	err = yaml.Unmarshal(file, &manifest)
+	if err != nil {
+		return plans, err
+	}
+
+	for _, plan := range manifest.Plans {
+		conf := plan.Configuration
+		keys := reflect.ValueOf(conf).MapKeys()
+		strKeys := make([]string, len(keys))
+		for i := 0; i < len(keys); i++ {
+			strKeys[i] = keys[i].String()
+		}
+
+		for _, key := range strKeys {
+			p := ExtractPlanIntFromPlanStr(conf[key].Value)
+			if p > 0 {
+				plans = append(plans, p)
+			}
+		}
+	}
+
+	sort.Ints(plans)
+	return plans, nil
+}
+
+// GetSmallestAppPlan take plans slice e.g. [20,5,10] and return 5 (int)
+func GetSmallestAppPlan(sortedPlans []int) int {
+	return sortedPlans[0]
 }
 
 // GetKubeconfig will load kubeconfig from KUBECONFIG environment variable.

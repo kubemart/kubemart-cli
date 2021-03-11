@@ -35,14 +35,14 @@ var installedCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if len(apps.Items) == 0 {
-			fmt.Println("No resources found")
-			os.Exit(0)
-		}
-
+		haveSomething := false
 		w := tabwriter.NewWriter(os.Stdout, 15, 0, 1, ' ', tabwriter.TabIndent)
 		fmt.Fprintln(w, "NAME\tCURRENT STATUS\tVERSION\tUPDATE AVAILABLE")
 		for _, app := range apps.Items {
+			if !app.DeletionTimestamp.IsZero() {
+				continue // skip deleted apps
+			}
+
 			currentStatus := fmt.Sprintf("\t%s", app.Status.LastStatus)
 			version := fmt.Sprintf("\t%s", app.Status.InstalledVersion)
 
@@ -57,8 +57,15 @@ var installedCmd = &cobra.Command{
 			newUpdate := fmt.Sprintf("\t%s", updateAvailable)
 
 			fmt.Fprintln(w, app.Name, currentStatus, version, newUpdate)
+			haveSomething = true
 		}
-		w.Flush()
+
+		if haveSomething {
+			w.Flush()
+		} else {
+			fmt.Println("No resources found")
+		}
+
 		os.Exit(0)
 	},
 }
