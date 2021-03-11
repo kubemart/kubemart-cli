@@ -222,13 +222,15 @@ func TestAvailableProgram(t *testing.T) {
 // --------------------------------------------------
 
 func TestGitClone(t *testing.T) {
-	targetDir := "/tmp/test"
+	homeDir, _ := os.UserHomeDir()
+	targetDir := fmt.Sprintf("%s/.kubemart/apps", homeDir)
 	output, _ := GitClone(targetDir)
 	fmt.Printf("Clone output: %s\n", output)
 }
 
 func TestGitPull(t *testing.T) {
-	targetDir := "/tmp/test"
+	homeDir, _ := os.UserHomeDir()
+	targetDir := fmt.Sprintf("%s/.kubemart/apps", homeDir)
 
 	hashBefore, _ := GitLatestCommitHash(targetDir)
 	fmt.Printf("Before reset commit: %s\n", hashBefore)
