@@ -1,14 +1,20 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
+	"net/url"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/tcnksm/go-latest"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -287,6 +293,9 @@ func TestDebugPrintf(t *testing.T) {
 	if bytesNum == 0 {
 		t.Errorf("Expected non-zero bytes but actual is %d", bytesNum)
 	}
+
+	// cleanup
+	_ = os.Unsetenv("LOGLEVEL")
 }
 
 func TestNotAvailableProgram(t *testing.T) {
@@ -404,9 +413,7 @@ func TestGetRESTConfig(t *testing.T) {
 	actual := restConfig.Host
 
 	o, _ := exec.Command("kubectl", "config", "view", "-o", "jsonpath='{.clusters[0].cluster.server}'").Output()
-	expected := string(o)
-	expected = strings.TrimSuffix(expected, "'")
-	expected = strings.TrimPrefix(expected, "'")
+	expected := strings.Trim(string(o), "'")
 
 	if expected != actual {
 		t.Errorf("Expected %s but actual is %s", expected, actual)
@@ -585,83 +592,217 @@ func TestExtractVersionFromContainerImage(t *testing.T) {
 	}
 }
 
-// --------------------------------------------------
-
-func TestGetContextAndClusterFromKubeconfigFlag(t *testing.T) {
-	// Simulate situation when user run CLI with "--kubeconfig" flag.
-	// For testing purpose, use absolute path to kubeconfig.
-	// In real live, user's terminal will expand the "~" or "$HOME".
-	homeDir, _ := os.UserHomeDir()
-	kubeconfigPath := fmt.Sprintf("%s/kind/cluster-2.yaml", homeDir)
-	fmt.Println("Kubeconfig path:", kubeconfigPath)
-	os.Setenv("KUBECONFIG", kubeconfigPath)
-
-	currentContext, err := GetCurrentContext()
-	if err != nil {
-		t.Error(err)
+func TestSanitizeDependencyName1(t *testing.T) {
+	input := "mariadb"
+	actual, _ := SanitizeDependencyName(input)
+	expected := input
+	if expected != actual {
+		t.Errorf("Expected %s but got %s", expected, actual)
 	}
-	fmt.Println("Current context:", currentContext)
-
-	clusterName, err := GetClusterName()
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println("Cluster name:", clusterName)
-
-	// 	Output:
-	// 	Current context: k3d-cluster-2-context
-	// Cluster name: k3d-cluster-2-cluster
 }
 
-func TestGetContextAndClusterFromKubeconfigEnv(t *testing.T) {
-	// Simulate situation when user have multiple contexts/clusters.
-	// For testing purpose, use absolute path to kubeconfig.
-	// In real live, user's terminal will expand the "~" or "$HOME".
-	homeDir, _ := os.UserHomeDir()
-	kubeConfigPath1 := fmt.Sprintf("%s/kind/cluster-1.yaml", homeDir)
-	fmt.Println("Kubeconfig path:", kubeConfigPath1)
-
-	kubeConfigPath2 := fmt.Sprintf("%s/kind/cluster-2.yaml", homeDir)
-	fmt.Println("Kubeconfig path:", kubeConfigPath2)
-
-	kubeConfigPaths := fmt.Sprintf("%s:%s", kubeConfigPath1, kubeConfigPath2)
-	os.Setenv("KUBECONFIG", kubeConfigPaths)
-	fmt.Println("KUBECONFIG:", os.Getenv("KUBECONFIG"))
-
-	// switch context to cluster-2
-	out, err := exec.Command("kubectl", "config", "use-context", "kind-cluster-2").Output()
-	if err != nil {
-		t.Error(err)
+func TestSanitizeDependencyName2(t *testing.T) {
+	input := "the-app-3"
+	actual, _ := SanitizeDependencyName(input)
+	expected := input
+	if expected != actual {
+		t.Errorf("Expected %s but got %s", expected, actual)
 	}
-	fmt.Println(string(out))
-
-	currentContext, err := GetCurrentContext()
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println("Current context:", currentContext)
-
-	clusterName, err := GetClusterName()
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println("Cluster name:", clusterName)
-
-	// 	Output:
-	// 	Current context: k3d-cluster-2-context
-	// Cluster name: k3d-cluster-2-cluster
 }
 
-// --------------------------------------------------
+func TestSanitizeDependencyName3(t *testing.T) {
+	input := "the-app3"
+	actual, _ := SanitizeDependencyName(input)
+	expected := input
+	if expected != actual {
+		t.Errorf("Expected %s but got %s", expected, actual)
+	}
+}
 
+func TestSanitizeVersionSegment(t *testing.T) {
+	minorVersion := "21+"
+	actual := SanitizeVersionSegment(minorVersion)
+	expected := "21"
+	if expected != actual {
+		t.Errorf("Expected %s but got %s", expected, actual)
+	}
+}
+
+func TestGetMasterIP(t *testing.T) {
+	actual, _ := GetMasterIP()
+	o, _ := exec.Command("kubectl", "config", "view", "-o", "jsonpath='{.clusters[0].cluster.server}'").Output()
+	s := string(o)
+	s = strings.TrimSuffix(s, "'")
+	s = strings.TrimPrefix(s, "'")
+
+	u, _ := url.Parse(s)
+	expected := u.Hostname()
+	if expected != actual {
+		t.Errorf("Expected %s but got %s", expected, actual)
+	}
+}
+
+func TestIsCRDExist(t *testing.T) {
+	actual := IsCRDExist("apps.kubemart.civo.com")
+	expected := false
+	if expected != actual {
+		t.Errorf("Expected %t but got %t", expected, actual)
+	}
+}
+
+// ApplyManifests() calls ExecuteSSA()
+// So, we are testing two functions in one go here
+func TestApplyManifests(t *testing.T) {
+	operatorYAML, _ := GetLatestManifests()
+	manifests := strings.Split(operatorYAML, "---")
+	_ = ApplyManifests(manifests)
+
+	actual := IsCRDExist("apps.kubemart.civo.com")
+	expected := true
+	if expected != actual {
+		t.Errorf("Expected %t but got %t", expected, actual)
+	}
+}
+
+// DeleteManifests() calls ExecuteSSA()
+// So, we are testing two functions in one go here
+func TestDeleteManifests(t *testing.T) {
+	operatorYAML, _ := GetLatestManifests()
+	manifests := strings.Split(operatorYAML, "---")
+	_ = DeleteManifests(manifests)
+
+	actual := IsCRDExist("apps.kubemart.civo.com")
+	expected := false
+	if expected != actual {
+		t.Errorf("Expected %t but got %t", expected, actual)
+	}
+}
+
+// GetKubeServerVersionHuman() calls GetKubeServerVersion()
+// So, we are testing two functions in one go here
 func TestGetKubeServerVersionHuman(t *testing.T) {
-	version, _ := GetKubeServerVersionHuman()
-	fmt.Printf("Human version: %s\n", version)
+	actual, _ := GetKubeServerVersionHuman()
+
+	var outb bytes.Buffer
+	c1 := exec.Command("kubectl", "version", "-o", "json")
+	c2 := exec.Command("jq", "-r", ".serverVersion.gitVersion")
+	c2.Stdin, _ = c1.StdoutPipe()
+	c2.Stdout = &outb
+	_ = c2.Start()
+	_ = c1.Run()
+	_ = c2.Wait()
+	expected := strings.Trim(outb.String(), "\r\n")
+
+	if expected != actual {
+		t.Errorf("Expected %s but got %s", expected, actual)
+	}
 }
 
+// GetKubeServerVersionCombined() calls GetKubeServerVersion()
+// So, we are testing two functions in one go here
 func TestGetKubeServerVersionCombined(t *testing.T) {
-	combined, _ := GetKubeServerVersionCombined()
-	fmt.Printf("Combined version: %d\n", combined)
+	actual, _ := GetKubeServerVersionCombined()
+
+	var outb bytes.Buffer
+	c1 := exec.Command("kubectl", "version", "-o", "json")
+	c2 := exec.Command("jq", "-r", ".serverVersion.gitVersion")
+	c2.Stdin, _ = c1.StdoutPipe()
+	c2.Stdout = &outb
+	_ = c2.Start()
+	_ = c1.Run()
+	_ = c2.Wait()
+
+	e1 := strings.Trim(outb.String(), "\r\n")
+	e2 := strings.Trim(e1, "v")
+	e3 := strings.Split(e2, ".")
+	e4 := e3[0] + e3[1]
+	expected, _ := strconv.Atoi(e4)
+
+	if expected != actual {
+		t.Errorf("Expected %d but got %d", expected, actual)
+	}
+}
+
+func TestGetInstalledOperatorVersion(t *testing.T) {
+	operatorYAML, _ := GetLatestManifests()
+	manifests := strings.Split(operatorYAML, "---")
+	_ = ApplyManifests(manifests)
+
+	actual, _ := GetInstalledOperatorVersion()
+	out, _ := exec.Command("kubectl", "-n", "kubemart-system",
+		"get", "deploy/kubemart-operator-controller-manager",
+		"-o", "jsonpath='{.spec.template.spec.containers[?(@.name==\"manager\")].image}'",
+	).Output()
+
+	expected := ExtractVersionFromContainerImage(string(out))
+	if expected != actual {
+		t.Errorf("Expected %s but got %s", expected, actual)
+	}
+}
+
+func TestIsAppExist1(t *testing.T) {
+	manifest := `
+apiVersion: kubemart.civo.com/v1alpha1
+kind: App
+metadata:
+  name: rabbitmq
+  namespace: kubemart-system
+spec:
+  name: rabbitmq
+  action: install`
+
+	fileBytes := []byte(manifest)
+	filename := "./rabbitmq.yaml"
+	_ = ioutil.WriteFile(filename, fileBytes, 0644)
+
+	c1 := exec.Command("cat", filename)
+	c2 := exec.Command("kubectl", "apply", "-f", "-")
+	c2.Stdin, _ = c1.StdoutPipe()
+	c2.Stdout = os.Stdout
+	_ = c2.Start()
+	_ = c1.Run()
+	_ = c2.Wait()
+	time.Sleep(1 * time.Second)
+
+	actual := IsAppExist("rabbitmq")
+	expected := true
+	if expected != actual {
+		t.Errorf("Expected %t but got %t", expected, actual)
+	}
+}
+
+func TestIsAppExist2(t *testing.T) {
+	actual := IsAppExist("catmq")
+	expected := false
+	if expected != actual {
+		t.Errorf("Expected %t but got %t", expected, actual)
+	}
+}
+
+func TestGetLatestOperatorReleaseVersion(t *testing.T) {
+	actual, _ := GetLatestOperatorReleaseVersion()
+
+	githubTag := &latest.GithubTag{
+		Owner:      "kubemart",
+		Repository: "kubemart-operator",
+	}
+	res, err := latest.Check(githubTag, "0.0.0")
+	if err != nil {
+		t.Errorf("Unable to check kubemart-operator latest version - %s", err)
+	}
+
+	expected := fmt.Sprintf("v%s", res.Current)
+
+	if expected != actual {
+		t.Errorf("Expected %s but got %s", expected, actual)
+	}
+}
+
+func TestGetLatestManifests(t *testing.T) {
+	manifests, _ := GetLatestManifests()
+	if !strings.Contains(manifests, "kubemart") {
+		t.Errorf("Manifests does not contain 'kubemart' word")
+	}
 }
 
 // --------------------

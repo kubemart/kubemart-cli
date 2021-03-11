@@ -11,7 +11,7 @@ fi
 # This dummy namespace will be deleted one of the tests
 echo "***"
 echo "Creating a dummy Namespace..."
-kubectl create ns dummy > /dev/null 2>&1 # don't show error if it exists
+kubectl create ns dummy
 
 echo "***"
 echo "Checking if ConfigMap exists..."
@@ -23,8 +23,12 @@ then
 fi
 
 echo "***"
-echo "Deleting ~/.kubemart folder"
+echo "Deleting ~/.kubemart folder..."
 rm -rf ~/.kubemart
+
+echo "***"
+echo "Deleting Kubemart CRDs..."
+kubectl delete crds --all -A
 
 echo "***"
 echo "Running tests..."
