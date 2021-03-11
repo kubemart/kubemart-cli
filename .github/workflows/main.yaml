@@ -15,7 +15,13 @@ jobs:
 
       - name: Run tests
         run: |
-          go test -v ./pkg/utils
+          chmod +x ./pkg/utils/run_test.sh
+          ./pkg/utils/run_test.sh
+
+      - name: Post tests clean-up
+        run: |
+          chmod +x ./pkg/utils/post_test.sh
+          ./pkg/utils/post_test.sh
 
   # =======================================================================
 

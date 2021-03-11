@@ -42,7 +42,11 @@ var rootCmd = &cobra.Command{
 
 		_, found := canSkipUpdateApps[cmd.Name()]
 		if !found {
-			utils.UpdateAppsCacheIfStale()
+			ok, err := utils.UpdateAppsCacheIfStale()
+			if !ok {
+				fmt.Printf("%v\n", err)
+				os.Exit(1)
+			}
 		}
 	},
 }

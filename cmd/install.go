@@ -80,7 +80,11 @@ var installCmd = &cobra.Command{
 		if created {
 			fmt.Println("App created successfully")
 			if !hidePostInstall {
-				utils.RenderPostInstallMarkdown(appName)
+				postInstallMsg, err := utils.GetPostInstallMarkdown(appName)
+				if err == nil {
+					fmt.Println("App post-install notes:")
+					fmt.Println(postInstallMsg)
+				}
 			}
 			os.Exit(0)
 		} else {
