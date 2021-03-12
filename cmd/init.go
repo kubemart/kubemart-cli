@@ -36,11 +36,10 @@ var initCmd = &cobra.Command{
 	Use:     "init",
 	Example: "kubemart init --email your@email.com",
 	Short:   "Setup local environment and install Kubemart operator",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		masterIP, err := utils.GetMasterIP()
 		if err != nil {
-			fmt.Printf("Unable to determine master node IP address - %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("Unable to determine master node IP address - %v", err)
 		}
 
 		if DomainName == "" {
@@ -49,8 +48,7 @@ var initCmd = &cobra.Command{
 
 		clusterName, err := utils.GetClusterName()
 		if err != nil {
-			fmt.Printf("Unable to determine cluster name - %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("Unable to determine cluster name - %v", err)
 		}
 
 		bcm := &utils.KubemartConfigMap{
@@ -63,14 +61,12 @@ var initCmd = &cobra.Command{
 
 		gitProgram := "git"
 		if !utils.IsCommandAvailable(gitProgram) {
-			fmt.Println(gitProgram, "program not found. Please install it first and retry.")
-			os.Exit(1)
+			return fmt.Errorf("%s program not found - please install it first and retry", gitProgram)
 		}
 
 		kubemartPaths, err := utils.GetKubemartPaths()
 		if err != nil {
-			fmt.Printf("Unable to load Kubemart paths - %v\n", err.Error())
-			os.Exit(1)
+			return fmt.Errorf("Unable to load Kubemart paths - %v", err.Error())
 		}
 
 		kubemartDirPath := kubemartPaths.RootDirectoryPath
@@ -83,78 +79,69 @@ var initCmd = &cobra.Command{
 			// Create apps folder
 			err = os.MkdirAll(appsDirPath, 0755)
 			if err != nil {
-				fmt.Println("Unable to create ~/.kubemart/apps directory ($ mkdir -p ~/.kubemart/apps)")
-				os.Exit(1)
+				return fmt.Errorf("Unable to create ~/.kubemart/apps directory ($ mkdir -p ~/.kubemart/apps)")
 			}
 
 			// Create config.json file
 			_, err := os.Create(configFilePath)
 			if err != nil {
-				fmt.Println("Unable to create ~/.kubemart/config.json file")
-				os.Exit(1)
+				return fmt.Errorf("Unable to create ~/.kubemart/config.json file")
 			}
 
 			// Clone
 			cloneOutput, err := utils.GitClone(appsDirPath)
 			if err != nil {
-				fmt.Printf("Unable to clone marketplace - %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("Unable to clone marketplace - %v", err)
 			}
 			utils.DebugPrintf("Clone output: %s\n", cloneOutput)
 
 			// Update timestamp
 			err = utils.UpdateConfigFileLastUpdatedTimestamp()
 			if err != nil {
-				fmt.Printf("Unable to config file's timestamp field - %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("Unable to config file's timestamp field - %v", err)
 			}
 		}
 
 		namespaceExists, err := utils.IsNamespaceExist("kubemart-system")
 		if err != nil {
-			fmt.Printf("Unable to check namespace - %v\n", err.Error())
-			os.Exit(1)
+			return fmt.Errorf("Unable to check namespace - %v", err.Error())
 		}
 
 		if !namespaceExists {
 			fmt.Println("Creating Namespace (for operator)...")
 			err = utils.CreateKubemartNamespace()
 			if err != nil {
-				fmt.Printf("Unable to create namespace - %v\n", err.Error())
-				os.Exit(1)
+				return fmt.Errorf("Unable to create namespace - %v", err.Error())
 			}
 		}
 
 		configMapExists, err := utils.IsKubemartConfigMapExist()
 		if err != nil {
-			fmt.Printf("Unable to check ConfigMap - %v\n", err.Error())
-			os.Exit(1)
+			return fmt.Errorf("Unable to check ConfigMap - %v", err.Error())
 		}
 
 		if !configMapExists {
 			fmt.Println("Creating ConfigMap (for operator)...")
 			err = utils.CreateKubemartConfigMap(bcm)
 			if err != nil {
-				fmt.Printf("Unable to create ConfigMap - %v\n", err.Error())
-				os.Exit(1)
+				return fmt.Errorf("Unable to create ConfigMap - %v", err.Error())
 			}
 		}
 
 		fmt.Println("Applying manifests...")
 		operatorYAML, err := utils.GetLatestManifests()
 		if err != nil {
-			fmt.Printf("Unable to download latest manifests - %v\n", err.Error())
-			os.Exit(1)
+			return fmt.Errorf("Unable to download latest manifests - %v", err.Error())
 		}
 
 		manifests := strings.Split(operatorYAML, "---")
 		err = utils.ApplyManifests(manifests)
 		if err != nil {
-			fmt.Printf("Unable to apply manifest - %v\n", err.Error())
-			os.Exit(1)
+			return fmt.Errorf("Unable to apply manifest - %v", err.Error())
 		}
 
 		fmt.Println("You are good to go")
+		return nil
 	},
 }
 

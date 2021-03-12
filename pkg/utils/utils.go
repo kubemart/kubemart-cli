@@ -217,8 +217,8 @@ func IsNamespaceExist(namespace string) (bool, error) {
 	}
 
 	if !ns.DeletionTimestamp.IsZero() {
-		DebugPrintf("%s namespace is being terminated\n", namespace)
-		return false, nil
+		DebugPrintf("%s namespace still exists and it's being terminated\n", namespace)
+		return true, nil
 	}
 
 	return true, nil
