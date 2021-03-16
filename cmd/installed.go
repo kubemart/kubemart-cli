@@ -28,11 +28,10 @@ var installedCmd = &cobra.Command{
 	Use:     "installed",
 	Example: "kubemart installed",
 	Short:   "List all installed applications",
-	Run: func(cmd *cobra.Command, args []string) {
-		apps, err := listApps()
+	RunE: func(cmd *cobra.Command, args []string) error {
+		apps, err := ListApps()
 		if err != nil {
-			fmt.Printf("%v\n", err)
-			os.Exit(1)
+			return err
 		}
 
 		haveSomething := false
@@ -66,7 +65,7 @@ var installedCmd = &cobra.Command{
 			fmt.Println("No resources found")
 		}
 
-		os.Exit(0)
+		return nil
 	},
 }
 

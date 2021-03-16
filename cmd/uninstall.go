@@ -17,7 +17,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	utils "github.com/kubemart/kubemart/pkg/utils"
 	"github.com/spf13/cobra"
@@ -29,28 +28,24 @@ var uninstallCmd = &cobra.Command{
 	Example: "kubemart uninstall rabbitmq",
 	Short:   "Uninstall an application",
 	Args:    cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		appName := args[0]
 		if appName == "" {
-			fmt.Println("Please provide an app name")
-			os.Exit(1)
+			return fmt.Errorf("Please provide an app name")
 		}
 		utils.DebugPrintf("App name to uninstall: %s\n", appName)
 
-		err := deleteApp(appName)
+		err := DeleteApp(appName)
 		if err != nil {
-			fmt.Printf("%v\n", err)
-			os.Exit(1)
+			return err
 		}
 
 		if err != nil {
-			fmt.Printf("Unable to delete %s app - %v\n", appName, err)
-			os.Exit(1)
+			return fmt.Errorf("Unable to delete %s app - %v", appName, err)
 		}
 
 		fmt.Printf("%s app is now scheduled to be deleted\n", appName)
-		os.Exit(0)
-
+		return nil
 	},
 }
 

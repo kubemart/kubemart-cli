@@ -10,11 +10,11 @@ import (
 	"github.com/kubemart/kubemart/pkg/utils"
 )
 
-// CanProceedWithInit ...
-func CanProceedWithInit() bool {
+// HasNamespaceGone ...
+func HasNamespaceGone(namespace string) bool {
 	canProceed := false
 	current := 0
-	maxRetries := 20
+	maxRetries := 40
 
 	for {
 		current++
@@ -22,13 +22,13 @@ func CanProceedWithInit() bool {
 			break
 		}
 
-		exists, _ := utils.IsNamespaceExist("kubemart-system")
+		exists, _ := utils.IsNamespaceExist(namespace)
 		if !exists {
 			canProceed = true
 			break
 		}
 
-		fmt.Println("Waiting for kubemart-system namespace to get terminated...")
+		fmt.Printf("Waiting for %s namespace to get terminated...\n", namespace)
 		time.Sleep(3 * time.Second)
 	}
 

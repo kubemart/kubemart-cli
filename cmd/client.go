@@ -16,7 +16,8 @@ const (
 	baseURL = "/apis/kubemart.civo.com/v1alpha1/namespaces/kubemart-system/apps"
 )
 
-func getKubeClientSetIfCRDIsInstalled() (*kubernetes.Clientset, error) {
+// GetKubeClientSetIfCRDIsInstalled ...
+func GetKubeClientSetIfCRDIsInstalled() (*kubernetes.Clientset, error) {
 	clientset := &kubernetes.Clientset{}
 	crdExist := utils.IsCRDExist("apps.kubemart.civo.com")
 	if !crdExist {
@@ -33,7 +34,8 @@ func getKubeClientSetIfCRDIsInstalled() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-func createApp(appName string, plan int) (bool, error) {
+// CreateApp ...
+func CreateApp(appName string, plan int) (bool, error) {
 	app := &operator.App{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "kubemart.civo.com/v1alpha1",
@@ -50,7 +52,7 @@ func createApp(appName string, plan int) (bool, error) {
 		},
 	}
 
-	clientset, err := getKubeClientSetIfCRDIsInstalled()
+	clientset, err := GetKubeClientSetIfCRDIsInstalled()
 	if err != nil {
 		return false, err
 	}
@@ -72,10 +74,11 @@ func createApp(appName string, plan int) (bool, error) {
 	return created, err
 }
 
-func getApp(appName string) (*operator.App, error) {
+// GetApp ...
+func GetApp(appName string) (*operator.App, error) {
 	app := &operator.App{}
 
-	clientset, err := getKubeClientSetIfCRDIsInstalled()
+	clientset, err := GetKubeClientSetIfCRDIsInstalled()
 	if err != nil {
 		return app, err
 	}
@@ -94,10 +97,11 @@ func getApp(appName string) (*operator.App, error) {
 	return app, nil
 }
 
-func listApps() (*operator.AppList, error) {
+// ListApps ...
+func ListApps() (*operator.AppList, error) {
 	apps := &operator.AppList{}
 
-	clientset, err := getKubeClientSetIfCRDIsInstalled()
+	clientset, err := GetKubeClientSetIfCRDIsInstalled()
 	if err != nil {
 		return apps, err
 	}
@@ -119,13 +123,14 @@ func listApps() (*operator.AppList, error) {
 	return apps, nil
 }
 
-func updateApp(appName string) error {
-	clientset, err := getKubeClientSetIfCRDIsInstalled()
+// UpdateApp ...
+func UpdateApp(appName string) error {
+	clientset, err := GetKubeClientSetIfCRDIsInstalled()
 	if err != nil {
 		return err
 	}
 
-	app, err := getApp(appName)
+	app, err := GetApp(appName)
 	if err != nil {
 		return err
 	}
@@ -155,8 +160,9 @@ func updateApp(appName string) error {
 	return err
 }
 
-func deleteApp(appName string) error {
-	clientset, err := getKubeClientSetIfCRDIsInstalled()
+// DeleteApp ...
+func DeleteApp(appName string) error {
+	clientset, err := GetKubeClientSetIfCRDIsInstalled()
 	if err != nil {
 		return err
 	}

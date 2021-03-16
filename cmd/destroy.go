@@ -31,16 +31,20 @@ var destroyCmd = &cobra.Command{
 	Example: "kubemart destroy",
 	Short:   "Completely remove Kubemart and all installed applications",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if !proceedWithoutPrompt {
-			var answer string
+		var answer string
+
+		if proceedWithoutPrompt {
+			answer = "y"
+		} else {
 			fmt.Println("Are you sure want to delete ALL apps and completely remove Kubemart Kubernetes resources e.g. operator, CRDs & etc from your cluster? y/n")
 			fmt.Scanln(&answer)
-			if answer != "y" {
-				return fmt.Errorf("Operation cancelled")
-			}
 		}
 
-		apps, err := listApps()
+		if answer != "y" {
+			return fmt.Errorf("Operation cancelled")
+		}
+
+		apps, err := ListApps()
 		if err != nil {
 			return err
 		}
@@ -48,7 +52,7 @@ var destroyCmd = &cobra.Command{
 		for _, app := range apps.Items {
 			appName := app.ObjectMeta.Name
 			fmt.Printf("Deleting %s app...\n", appName)
-			err := deleteApp(appName)
+			err := DeleteApp(appName)
 			if err != nil {
 				return err
 			}

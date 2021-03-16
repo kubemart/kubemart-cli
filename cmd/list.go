@@ -34,15 +34,14 @@ var listCmd = &cobra.Command{
 	Example: "kubemart list",
 	Short:   "List all the applications that can be installed",
 	Long:    `This command will display the list of all the applications that can be installed onto the Kubernetes cluster`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		excludeList = make(map[string]bool)
 		excludeList["bin"] = true
 		dir, _ := utils.GetKubemartPaths()
 		path := dir.AppsDirectoryPath
 		files, err := ioutil.ReadDir(path)
 		if err != nil {
-			fmt.Printf("Unable parse get list of files - %v", err)
-			os.Exit(1)
+			return fmt.Errorf("Unable parse get list of files - %v", err)
 		}
 		apps := []string{}
 		for _, file := range files {
@@ -50,14 +49,15 @@ var listCmd = &cobra.Command{
 			filePath := fmt.Sprintf("%s/%s", path, fileName)
 			fileInfo, err := os.Stat(filePath)
 			if err != nil {
-				fmt.Printf("Unable to locate file - %v", err)
-				os.Exit(1)
+				return fmt.Errorf("Unable to locate file - %v", err)
 			}
 			if fileInfo.IsDir() && isValid(fileName) {
 				apps = append(apps, fileName)
 			}
 		}
+
 		fmt.Println(strings.Join(apps, "\n"))
+		return nil
 	},
 }
 

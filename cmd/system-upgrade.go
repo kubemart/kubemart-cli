@@ -17,7 +17,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	utils "github.com/kubemart/kubemart/pkg/utils"
@@ -29,21 +28,20 @@ var systemUpgradeCmd = &cobra.Command{
 	Use:     "system-upgrade",
 	Example: "kubemart system-upgrade",
 	Short:   "Upgrade Kubemart operator to latest version",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		operatorYAML, err := utils.GetLatestManifests()
 		if err != nil {
-			fmt.Printf("Unable to download latest manifests - %v\n", err.Error())
-			os.Exit(1)
+			return fmt.Errorf("Unable to download latest manifests - %v", err)
 		}
 
 		manifests := strings.Split(operatorYAML, "---")
 		err = utils.ApplyManifests(manifests)
 		if err != nil {
-			fmt.Printf("Unable to apply manifest upgrade - %v\n", err.Error())
-			os.Exit(1)
+			return fmt.Errorf("Unable to apply manifest upgrade - %v", err)
 		}
 
 		fmt.Println("System upgrade complete successfully")
+		return nil
 	},
 }
 

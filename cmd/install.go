@@ -71,7 +71,7 @@ var installCmd = &cobra.Command{
 			utils.DebugPrintf("Plan to proceed with: %d\n", Plan)
 		}
 
-		created, err := createApp(appName, Plan)
+		created, err := CreateApp(appName, Plan)
 		if !created {
 			return fmt.Errorf("App creation failed - %+v", err.Error())
 		}
