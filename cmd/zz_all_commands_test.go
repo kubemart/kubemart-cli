@@ -272,7 +272,7 @@ func TestVersionVerbose(t *testing.T) {
 		rootCmd.Execute()
 	})
 
-	expected := "App CRD status: installed"
+	expected := "App CRD status: created"
 	if !strings.Contains(actual, expected) {
 		t.Errorf("Expecting output to contain %s but got %s", expected, actual)
 	}

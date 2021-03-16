@@ -50,13 +50,13 @@ var (
 				operatorVersion, _ := utils.GetInstalledOperatorVersion()
 				fmt.Printf("Operator version: %s\n", operatorVersion)
 
-				isAppCRDInstalled := "not installed"
-				isJobWatcherCRDInstalled := "not installed"
+				isAppCRDInstalled := "not created"
+				isJobWatcherCRDInstalled := "not created"
 				if utils.IsCRDExist("apps.kubemart.civo.com") {
-					isAppCRDInstalled = "installed"
+					isAppCRDInstalled = "created"
 				}
 				if utils.IsCRDExist("jobwatchers.kubemart.civo.com") {
-					isJobWatcherCRDInstalled = "installed"
+					isJobWatcherCRDInstalled = "created"
 				}
 				fmt.Printf("App CRD status: %s\n", isAppCRDInstalled)
 				fmt.Printf("JobWatcher CRD status: %s\n", isJobWatcherCRDInstalled)
@@ -67,6 +67,13 @@ var (
 					namespaceStatus = "created"
 				}
 				fmt.Printf("Namespace (kubemart-system) status: %s\n", namespaceStatus)
+
+				configMapStatus := "not created"
+				cmExists, _ := utils.IsKubemartConfigMapExist()
+				if cmExists {
+					configMapStatus = "created"
+				}
+				fmt.Printf("ConfigMap (kubemart-config) status: %s\n", configMapStatus)
 
 				res, err := latest.Check(githubTag, strings.Replace(VersionCli, "v", "", 1))
 				if err != nil {
