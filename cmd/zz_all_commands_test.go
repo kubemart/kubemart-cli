@@ -175,7 +175,7 @@ func TestSystemUpgrade(t *testing.T) {
 		rootCmd.Execute()
 	})
 
-	expected := "System upgrade complete successfully"
+	expected := "Upgrade complete successfully"
 	if !strings.Contains(actual, expected) {
 		t.Errorf("Expecting output to contain %s but got %s", expected, actual)
 	}
