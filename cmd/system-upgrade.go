@@ -34,13 +34,14 @@ var systemUpgradeCmd = &cobra.Command{
 			return fmt.Errorf("Unable to download latest manifests - %v", err)
 		}
 
+		fmt.Println("Upgrading Kubemart components...")
 		manifests := strings.Split(operatorYAML, "---")
 		err = utils.ApplyManifests(manifests)
 		if err != nil {
 			return fmt.Errorf("Unable to apply manifest upgrade - %v", err)
 		}
 
-		fmt.Println("System upgrade complete successfully")
+		fmt.Println("Upgrade complete successfully")
 		return nil
 	},
 }

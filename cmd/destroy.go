@@ -18,6 +18,7 @@ package cmd
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/kubemart/kubemart/pkg/utils"
 	"github.com/spf13/cobra"
@@ -49,6 +50,7 @@ var destroyCmd = &cobra.Command{
 			return err
 		}
 
+		deletedApps := []string{}
 		for _, app := range apps.Items {
 			appName := app.ObjectMeta.Name
 			fmt.Printf("Deleting %s app...\n", appName)
@@ -56,6 +58,21 @@ var destroyCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
+
+			fmt.Printf("Waiting %s app to get deleted...\n", appName)
+			for i := 0; i < 120; i++ {
+				_, err := GetApp(appName)
+				if err != nil {
+					fmt.Printf("%s app has been deleted...\n", appName)
+					deletedApps = append(deletedApps, appName)
+					break
+				}
+				time.Sleep(1 * time.Second)
+			}
+		}
+
+		if len(apps.Items) != len(deletedApps) {
+			return fmt.Errorf("Some apps didn't get deleted successfully. Please rerun this command.")
 		}
 
 		fmt.Println("All apps have been deleted")
