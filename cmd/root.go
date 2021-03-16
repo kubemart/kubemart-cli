@@ -55,7 +55,6 @@ var rootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
 		os.Exit(1)
 	}
 }
@@ -68,6 +67,10 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&kubeCfgFile, "kubeconfig", "k", "", "kubeconfig file")
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "print verbose logs when running command")
 	rootCmd.SetHelpCommand(&cobra.Command{Use: "no-help", Hidden: true}) // disable "kubemart help <command>"
+
+	// https://github.com/spf13/cobra/issues/340
+	rootCmd.SilenceUsage = true
+
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")

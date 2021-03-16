@@ -17,7 +17,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/kubemart/kubemart/pkg/utils"
@@ -31,30 +30,31 @@ var destroyCmd = &cobra.Command{
 	Use:     "destroy",
 	Example: "kubemart destroy",
 	Short:   "Completely remove Kubemart and all installed applications",
-	Run: func(cmd *cobra.Command, args []string) {
-		if !proceedWithoutPrompt {
-			var answer string
+	RunE: func(cmd *cobra.Command, args []string) error {
+		var answer string
+
+		if proceedWithoutPrompt {
+			answer = "y"
+		} else {
 			fmt.Println("Are you sure want to delete ALL apps and completely remove Kubemart Kubernetes resources e.g. operator, CRDs & etc from your cluster? y/n")
 			fmt.Scanln(&answer)
-			if answer != "y" {
-				fmt.Println("Operation cancelled")
-				os.Exit(1)
-			}
 		}
 
-		apps, err := listApps()
+		if answer != "y" {
+			return fmt.Errorf("Operation cancelled")
+		}
+
+		apps, err := ListApps()
 		if err != nil {
-			fmt.Printf("%v\n", err)
-			os.Exit(1)
+			return err
 		}
 
 		for _, app := range apps.Items {
 			appName := app.ObjectMeta.Name
 			fmt.Printf("Deleting %s app...\n", appName)
-			err := deleteApp(appName)
+			err := DeleteApp(appName)
 			if err != nil {
-				fmt.Printf("%v\n", err)
-				os.Exit(1)
+				return err
 			}
 		}
 
@@ -62,18 +62,17 @@ var destroyCmd = &cobra.Command{
 		fmt.Println("Deleting kubemart Kubernetes objects (operator, CRDs & etc)...")
 		operatorYAML, err := utils.GetLatestManifests()
 		if err != nil {
-			fmt.Printf("Unable to download latest manifests - %v\n", err.Error())
-			os.Exit(1)
+			return fmt.Errorf("Unable to download latest manifests - %v", err.Error())
 		}
 
 		manifests := strings.Split(operatorYAML, "---")
 		err = utils.DeleteManifests(manifests)
 		if err != nil {
-			fmt.Printf("Unable to delete manifest - %v\n", err.Error())
-			os.Exit(1)
+			return fmt.Errorf("Unable to delete manifest - %v", err.Error())
 		}
 
 		fmt.Println("All done")
+		return nil
 	},
 }
 

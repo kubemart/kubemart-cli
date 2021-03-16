@@ -8,17 +8,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Setup tests environment
+      - name: Setup Cobra tests environment
+        run: kind create cluster --name cobra
+
+      - name: Run Cobra tests
+        run: |
+          chmod +x ./cmd/zz_all_commands_test.sh
+          ./cmd/zz_all_commands_test.sh
+      
+      - name: Post Cobra tests clean-up
+        run: kind delete cluster --name cobra
+
+      - name: Setup utils tests environment
         run: |
           chmod +x ./pkg/utils/setup_test.sh
           ./pkg/utils/setup_test.sh
 
-      - name: Run tests
+      - name: Run utils tests
         run: |
           chmod +x ./pkg/utils/run_test.sh
           ./pkg/utils/run_test.sh
 
-      - name: Post tests clean-up
+      - name: Post utils tests clean-up
         run: |
           chmod +x ./pkg/utils/post_test.sh
           ./pkg/utils/post_test.sh

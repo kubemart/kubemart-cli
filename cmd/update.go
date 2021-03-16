@@ -17,7 +17,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	utils "github.com/kubemart/kubemart/pkg/utils"
 	"github.com/spf13/cobra"
@@ -29,22 +28,20 @@ var updateCmd = &cobra.Command{
 	Example: "kubemart update rabbitmq",
 	Short:   "Update an application",
 	Args:    cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		appName := args[0]
 		if appName == "" {
-			fmt.Println("Please provide an app name")
-			os.Exit(1)
+			return fmt.Errorf("Please provide an app name")
 		}
 		utils.DebugPrintf("App name to install: %s\n", appName)
 
-		err := updateApp(appName)
+		err := UpdateApp(appName)
 		if err != nil {
-			fmt.Printf("Unable to update app - %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("Unable to update app - %v", err)
 		}
 
 		fmt.Printf("%s app is now scheduled to be updated\n", appName)
-		os.Exit(0)
+		return nil
 	},
 }
 

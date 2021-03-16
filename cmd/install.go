@@ -17,7 +17,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/forestgiant/sliceutil"
 	utils "github.com/kubemart/kubemart/pkg/utils"
@@ -36,24 +35,21 @@ var installCmd = &cobra.Command{
 	Example: "kubemart install rabbitmq",
 	Short:   "Install an application",
 	Args:    cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		appName := args[0]
 		if appName == "" {
-			fmt.Println("Please provide an app name")
-			os.Exit(1)
+			return fmt.Errorf("Please provide an app name")
 		}
 		utils.DebugPrintf("App name to install: %s\n", appName)
 
 		appExists := utils.IsAppExist(appName)
 		if !appExists {
-			fmt.Printf("Unable to find %s app. Please try again.\n", appName)
-			os.Exit(1)
+			return fmt.Errorf("Unable to find %s app", appName)
 		}
 
 		appPlans, err := utils.GetAppPlans(appName)
 		if err != nil {
-			fmt.Printf("Unable to list app's plans - %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("Unable to list app's plans - %v", err)
 		}
 
 		if len(appPlans) > 0 {
@@ -68,29 +64,28 @@ var installCmd = &cobra.Command{
 
 			if Plan > 0 {
 				if !sliceutil.Contains(appPlans, Plan) {
-					fmt.Printf("The given plan is not supported for this app. Supported values are %v.\n", appPlans)
-					os.Exit(1)
+					return fmt.Errorf("The given plan is not supported for this app - supported values are %v", appPlans)
 				}
 			}
 
 			utils.DebugPrintf("Plan to proceed with: %d\n", Plan)
 		}
 
-		created, err := createApp(appName, Plan)
-		if created {
-			fmt.Println("App created successfully")
-			if !hidePostInstall {
-				postInstallMsg, err := utils.GetPostInstallMarkdown(appName)
-				if err == nil {
-					fmt.Println("App post-install notes:")
-					fmt.Println(postInstallMsg)
-				}
-			}
-			os.Exit(0)
-		} else {
-			fmt.Printf("App creation failed - %+v\n", err.Error())
-			os.Exit(1)
+		created, err := CreateApp(appName, Plan)
+		if !created {
+			return fmt.Errorf("App creation failed - %+v", err.Error())
 		}
+
+		fmt.Println("App created successfully")
+		if !hidePostInstall {
+			postInstallMsg, err := utils.GetPostInstallMarkdown(appName)
+			if err == nil {
+				fmt.Println("App post-install notes:")
+				fmt.Println(postInstallMsg)
+			}
+		}
+
+		return nil
 	},
 }
 
