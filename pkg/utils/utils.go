@@ -601,23 +601,6 @@ func ExtractVersionFromContainerImage(image string) string {
 	return ""
 }
 
-// SanitizeDependencyName ...
-// https://rubular.com/r/5ibwrOnew3vKpf
-func SanitizeDependencyName(input string) (string, error) {
-	emptyStr := ""
-	r, err := regexp.Compile(`^[a-z-0-9]*`)
-	if err != nil {
-		return emptyStr, err
-	}
-
-	cleaned := r.FindString(input)
-	if cleaned == emptyStr {
-		return emptyStr, fmt.Errorf("Dependency name is empty")
-	}
-
-	return cleaned, nil
-}
-
 // SanitizeVersionSegment ...
 // Sometimes, k8s server minor version contains special characters
 // e.g. 1.21+ (for v1.21.0-beta.0). This function will exclude all special
