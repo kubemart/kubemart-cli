@@ -592,33 +592,6 @@ func TestExtractVersionFromContainerImage(t *testing.T) {
 	}
 }
 
-func TestSanitizeDependencyName1(t *testing.T) {
-	input := "mariadb"
-	actual, _ := SanitizeDependencyName(input)
-	expected := input
-	if expected != actual {
-		t.Errorf("Expected %s but got %s", expected, actual)
-	}
-}
-
-func TestSanitizeDependencyName2(t *testing.T) {
-	input := "the-app-3"
-	actual, _ := SanitizeDependencyName(input)
-	expected := input
-	if expected != actual {
-		t.Errorf("Expected %s but got %s", expected, actual)
-	}
-}
-
-func TestSanitizeDependencyName3(t *testing.T) {
-	input := "the-app3"
-	actual, _ := SanitizeDependencyName(input)
-	expected := input
-	if expected != actual {
-		t.Errorf("Expected %s but got %s", expected, actual)
-	}
-}
-
 func TestSanitizeVersionSegment(t *testing.T) {
 	minorVersion := "21+"
 	actual := SanitizeVersionSegment(minorVersion)
