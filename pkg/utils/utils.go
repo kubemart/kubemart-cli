@@ -276,10 +276,7 @@ func DebugPrintf(format string, a ...interface{}) (n int, err error) {
 // IsCommandAvailable returns true if a program is installed
 func IsCommandAvailable(name string) bool {
 	_, err := exec.LookPath(name)
-	if err == nil {
-		return true
-	}
-	return false
+	return err == nil
 }
 
 // GitClone will run `git clone` and save the contents into directory
@@ -388,7 +385,7 @@ func UpdateAppsCacheIfStale() (bool, error) {
 	// when the apps are outdated
 	bp, err := GetKubemartPaths()
 	if err != nil {
-		return false, fmt.Errorf("Unable to load kubemart paths - %v", err)
+		return false, fmt.Errorf("unable to load kubemart paths - %v", err)
 	}
 
 	appsFolder := bp.AppsDirectoryPath
@@ -402,7 +399,7 @@ func UpdateAppsCacheIfStale() (bool, error) {
 
 	err = UpdateConfigFileLastUpdatedTimestamp()
 	if err != nil {
-		return false, fmt.Errorf("Unable to config file's timestamp field - %v", err)
+		return false, fmt.Errorf("unable to config file's timestamp field - %v", err)
 	}
 
 	DebugPrintf("Config file's timestamp field updated successfully")
@@ -431,14 +428,14 @@ func GitLatestCommitHash(directory string) (string, error) {
 func GetPostInstallMarkdown(appName string) (string, error) {
 	bp, err := GetKubemartPaths()
 	if err != nil {
-		return "", fmt.Errorf("Unable to get kubemart paths - %v", err.Error())
+		return "", fmt.Errorf("unable to get kubemart paths - %v", err.Error())
 	}
 
 	appManifestPath := filepath.Join(bp.AppsDirectoryPath, appName, "post_install.md")
 	DebugPrintf("App post install file - %s\n", appManifestPath)
 	file, err := ioutil.ReadFile(appManifestPath)
 	if err != nil {
-		return "", fmt.Errorf("Unable to load post-install notes for this app - %v", err.Error())
+		return "", fmt.Errorf("unable to load post-install notes for this app - %v", err.Error())
 	}
 
 	if runtime.GOOS == "windows" {
@@ -447,7 +444,7 @@ func GetPostInstallMarkdown(appName string) (string, error) {
 
 	out, err := glamour.Render(string(file), "dark")
 	if err != nil {
-		return out, fmt.Errorf("Unable to format the post-install - %v", err.Error())
+		return out, fmt.Errorf("unable to format the post-install - %v", err.Error())
 	}
 
 	return out, nil
@@ -510,7 +507,6 @@ func GetKubeconfig() clientcmd.ClientConfig {
 // GetRESTConfig returns the kubeconfig's REST config
 func GetRESTConfig() (*rest.Config, error) {
 	kubeConfig := GetKubeconfig()
-	restConfig := &rest.Config{}
 	restConfig, err := kubeConfig.ClientConfig()
 	if err != nil {
 		return restConfig, err
@@ -616,7 +612,6 @@ func SanitizeVersionSegment(input string) string {
 // GetMasterIP returns the master/control-plane IP address
 func GetMasterIP() (string, error) {
 	kubeConfig := GetKubeconfig()
-	restConfig := &rest.Config{}
 	restConfig, err := kubeConfig.ClientConfig()
 	if err != nil {
 		return "", err
@@ -634,11 +629,7 @@ func IsCRDExist(crdName string) bool {
 
 	crdClient := clientset.ApiextensionsV1().CustomResourceDefinitions()
 	_, err = crdClient.Get(context.Background(), crdName, metav1.GetOptions{})
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
 // ApplyManifests ...
@@ -857,7 +848,7 @@ func GetInstalledOperatorVersion() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("Manager container not found")
+	return "", fmt.Errorf("manager container not found")
 }
 
 // IsAppExist ...
@@ -915,7 +906,7 @@ func GetLatestManifests() (string, error) {
 	}
 
 	if n == 0 {
-		return manifests, fmt.Errorf("Manifests are empty")
+		return manifests, fmt.Errorf("manifests are empty")
 	}
 
 	manifests = buf.String()
