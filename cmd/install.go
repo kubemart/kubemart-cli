@@ -38,18 +38,18 @@ var installCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		appName := args[0]
 		if appName == "" {
-			return fmt.Errorf("Please provide an app name")
+			return fmt.Errorf("please provide an app name")
 		}
 		utils.DebugPrintf("App name to install: %s\n", appName)
 
 		appExists := utils.IsAppExist(appName)
 		if !appExists {
-			return fmt.Errorf("Unable to find %s app", appName)
+			return fmt.Errorf("unable to find %s app", appName)
 		}
 
 		appPlans, err := utils.GetAppPlans(appName)
 		if err != nil {
-			return fmt.Errorf("Unable to list app's plans - %v", err)
+			return fmt.Errorf("unable to list app's plans - %v", err)
 		}
 
 		if len(appPlans) > 0 {
@@ -64,7 +64,7 @@ var installCmd = &cobra.Command{
 
 			if Plan > 0 {
 				if !sliceutil.Contains(appPlans, Plan) {
-					return fmt.Errorf("The given plan is not supported for this app - supported values are %v", appPlans)
+					return fmt.Errorf("the given plan is not supported for this app - supported values are %v", appPlans)
 				}
 			}
 
@@ -73,7 +73,7 @@ var installCmd = &cobra.Command{
 
 		created, err := CreateApp(appName, Plan)
 		if !created {
-			return fmt.Errorf("App creation failed - %+v", err.Error())
+			return fmt.Errorf("app creation failed - %+v", err.Error())
 		}
 
 		fmt.Println("App created successfully")

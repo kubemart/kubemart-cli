@@ -79,12 +79,16 @@ func init() {
 	cobra.OnInitialize(setLogLevelEnvIfFlagIsTrue)
 }
 
+// replaceKubeconfigEnvIfFlagIsPresent will set KUBECONFIG env variable
+// when user use '--kubeconfig' or '-k' flag
 func replaceKubeconfigEnvIfFlagIsPresent() {
 	if kubeCfgFile != "" {
 		os.Setenv("KUBECONFIG", kubeCfgFile)
 	}
 }
 
+// setLogLevelEnvIfFlagIsTrue will set LOGLEVEL env variable
+// when user use '--debug' or '-d' flag
 func setLogLevelEnvIfFlagIsTrue() {
 	if debug {
 		os.Setenv("LOGLEVEL", "debug")

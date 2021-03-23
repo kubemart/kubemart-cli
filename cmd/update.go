@@ -31,13 +31,13 @@ var updateCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		appName := args[0]
 		if appName == "" {
-			return fmt.Errorf("Please provide an app name")
+			return fmt.Errorf("please provide an app name")
 		}
 		utils.DebugPrintf("App name to install: %s\n", appName)
 
 		err := UpdateApp(appName)
 		if err != nil {
-			return fmt.Errorf("Unable to update app - %v", err)
+			return fmt.Errorf("unable to update app - %v", err)
 		}
 
 		fmt.Printf("%s app is now scheduled to be updated\n", appName)

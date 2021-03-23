@@ -16,7 +16,8 @@ const (
 	baseURL = "/apis/kubemart.civo.com/v1alpha1/namespaces/kubemart-system/apps"
 )
 
-// GetKubeClientSetIfCRDIsInstalled ...
+// GetKubeClientSetIfCRDIsInstalled returns Kubernetes client if the
+// App CRD exists in the user's cluster
 func GetKubeClientSetIfCRDIsInstalled() (*kubernetes.Clientset, error) {
 	clientset := &kubernetes.Clientset{}
 	crdExist := utils.IsCRDExist("apps.kubemart.civo.com")
@@ -28,13 +29,13 @@ func GetKubeClientSetIfCRDIsInstalled() (*kubernetes.Clientset, error) {
 
 	clientset, err := utils.GetKubeClientSet()
 	if err != nil {
-		return clientset, fmt.Errorf("Unable to create k8s clientset - %v", err)
+		return clientset, fmt.Errorf("unable to create k8s clientset - %v", err)
 	}
 
 	return clientset, nil
 }
 
-// CreateApp ...
+// CreateApp will create an App in user's cluster
 func CreateApp(appName string, plan int) (bool, error) {
 	app := &operator.App{
 		TypeMeta: metav1.TypeMeta{
@@ -59,7 +60,7 @@ func CreateApp(appName string, plan int) (bool, error) {
 
 	body, err := json.Marshal(app)
 	if err != nil {
-		return false, fmt.Errorf("Unable to marshall app's manifest - %v", err)
+		return false, fmt.Errorf("unable to marshall app's manifest - %v", err)
 	}
 
 	created := false
@@ -74,7 +75,7 @@ func CreateApp(appName string, plan int) (bool, error) {
 	return created, err
 }
 
-// GetApp ...
+// GetApp will get an App from user's cluster
 func GetApp(appName string) (*operator.App, error) {
 	app := &operator.App{}
 
@@ -91,13 +92,13 @@ func GetApp(appName string) (*operator.App, error) {
 		Into(app)
 
 	if err != nil {
-		return app, fmt.Errorf("Unable to fetch app data - %v", err)
+		return app, fmt.Errorf("unable to fetch app data - %v", err)
 	}
 
 	return app, nil
 }
 
-// ListApps ...
+// ListApps will get all Apps from user's cluster
 func ListApps() (*operator.AppList, error) {
 	apps := &operator.AppList{}
 
@@ -112,18 +113,18 @@ func ListApps() (*operator.AppList, error) {
 		Do(context.Background())
 
 	if res.Error() != nil {
-		return apps, fmt.Errorf("Unable to list apps - %v", res.Error())
+		return apps, fmt.Errorf("unable to list apps - %v", res.Error())
 	}
 
 	err = res.Into(apps)
 	if err != nil {
-		return apps, fmt.Errorf("Unable to parse apps - %v", err)
+		return apps, fmt.Errorf("unable to parse apps - %v", err)
 	}
 
 	return apps, nil
 }
 
-// UpdateApp ...
+// UpdateApp will update an App in user's cluster
 func UpdateApp(appName string) error {
 	clientset, err := GetKubeClientSetIfCRDIsInstalled()
 	if err != nil {
@@ -136,17 +137,17 @@ func UpdateApp(appName string) error {
 	}
 
 	if !app.ObjectMeta.DeletionTimestamp.IsZero() {
-		return fmt.Errorf("This %s app is being deleted - you can't update it", appName)
+		return fmt.Errorf("this %s app is being deleted - you can't update it", appName)
 	}
 
 	if !app.Status.NewUpdateAvailable {
-		return fmt.Errorf("There is no new update available for this app - you are already using the latest version")
+		return fmt.Errorf("there is no new update available for this app - you are already using the latest version")
 	}
 
 	app.Spec.Action = "update"
 	body, err := json.Marshal(app)
 	if err != nil {
-		return fmt.Errorf("Unable to marshall app's manifest - %v", err)
+		return fmt.Errorf("unable to marshall app's manifest - %v", err)
 	}
 
 	path := fmt.Sprintf("%s/%s", baseURL, appName)
@@ -160,7 +161,7 @@ func UpdateApp(appName string) error {
 	return err
 }
 
-// DeleteApp ...
+// DeleteApp will delete an App from user's cluster
 func DeleteApp(appName string) error {
 	clientset, err := GetKubeClientSetIfCRDIsInstalled()
 	if err != nil {

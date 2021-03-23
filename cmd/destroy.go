@@ -42,7 +42,7 @@ var destroyCmd = &cobra.Command{
 		}
 
 		if answer != "y" {
-			return fmt.Errorf("Operation cancelled")
+			return fmt.Errorf("operation cancelled")
 		}
 
 		apps, err := ListApps()
@@ -72,20 +72,20 @@ var destroyCmd = &cobra.Command{
 		}
 
 		if len(apps.Items) != len(deletedApps) {
-			return fmt.Errorf("Some apps didn't get deleted successfully. Please rerun this command.")
+			return fmt.Errorf("some apps didn't get deleted successfully - please rerun this command")
 		}
 
 		fmt.Println("All apps have been deleted")
 		fmt.Println("Deleting kubemart Kubernetes objects (operator, CRDs & etc)...")
 		operatorYAML, err := utils.GetLatestManifests()
 		if err != nil {
-			return fmt.Errorf("Unable to download latest manifests - %v", err.Error())
+			return fmt.Errorf("unable to download latest manifests - %v", err.Error())
 		}
 
 		manifests := strings.Split(operatorYAML, "---")
 		err = utils.DeleteManifests(manifests)
 		if err != nil {
-			return fmt.Errorf("Unable to delete manifest - %v", err.Error())
+			return fmt.Errorf("unable to delete manifest - %v", err.Error())
 		}
 
 		fmt.Println("All done")

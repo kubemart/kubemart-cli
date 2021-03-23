@@ -31,7 +31,7 @@ var uninstallCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		appName := args[0]
 		if appName == "" {
-			return fmt.Errorf("Please provide an app name")
+			return fmt.Errorf("please provide an app name")
 		}
 		utils.DebugPrintf("App name to uninstall: %s\n", appName)
 
@@ -41,7 +41,7 @@ var uninstallCmd = &cobra.Command{
 		}
 
 		if err != nil {
-			return fmt.Errorf("Unable to delete %s app - %v", appName, err)
+			return fmt.Errorf("unable to delete %s app - %v", appName, err)
 		}
 
 		fmt.Printf("%s app is now scheduled to be deleted\n", appName)

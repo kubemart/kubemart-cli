@@ -10,7 +10,9 @@ import (
 	"github.com/kubemart/kubemart/pkg/utils"
 )
 
-// HasNamespaceGone ...
+// HasNamespaceGone will wait until the namespace gets completely deleted
+// and return 'true' when it completes. Otherwise it returns 'false' if
+// the namespace still exists after maximum waiting period (maxRetries).
 func HasNamespaceGone(namespace string) bool {
 	canProceed := false
 	current := 0
@@ -35,7 +37,8 @@ func HasNamespaceGone(namespace string) bool {
 	return canProceed
 }
 
-// RecordStdOutStdErr ...
+// RecordStdOutStdErr will execute callerFunc (that contains commands to execute),
+// wait until the execution ends and return its stdout and stderr
 func RecordStdOutStdErr(callerFunc func()) (string, string) {
 	stdOut := os.Stdout
 	stdErr := os.Stderr

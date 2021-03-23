@@ -40,7 +40,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// manifestOperation for Server Side Apply
+// manifestOperation is used to define Server Side Apply operation
+// e.g. "apply" or "delete"
 type manifestOperation string
 
 const (
@@ -83,7 +84,8 @@ type KubemartPaths struct {
 	ConfigFilePath    string
 }
 
-// LatestGitHubReleaseResponse ...
+// LatestGitHubReleaseResponse is the structure of GitHub API response.
+// The latest release tag is used to download the latest k8s manifest files for SSA.
 type LatestGitHubReleaseResponse struct {
 	TagName string `json:"tag_name"`
 }
@@ -251,7 +253,7 @@ func CreateKubemartNamespace() error {
 	return nil
 }
 
-// DeleteNamespace ...
+// DeleteNamespace will delete given namespace from user's cluster
 func DeleteNamespace(namespace string) error {
 	clientset, err := GetKubeClientSet()
 	if err != nil {
@@ -263,7 +265,8 @@ func DeleteNamespace(namespace string) error {
 	return err
 }
 
-// DebugPrintf is used to print debug messages (useful during development)
+// DebugPrintf is used to print debug messages, useful during development
+// or when reporting issues
 func DebugPrintf(format string, a ...interface{}) (n int, err error) {
 	logLevel := os.Getenv("LOGLEVEL")
 	if logLevel == "debug" {
@@ -273,16 +276,13 @@ func DebugPrintf(format string, a ...interface{}) (n int, err error) {
 	return 0, nil
 }
 
-// IsCommandAvailable returns true if a program is installed
+// IsCommandAvailable returns true if a program is installed in user's machine
 func IsCommandAvailable(name string) bool {
 	_, err := exec.LookPath(name)
-	if err == nil {
-		return true
-	}
-	return false
+	return err == nil
 }
 
-// GitClone will run `git clone` and save the contents into directory
+// GitClone will run `git clone` and save the contents into target directory
 func GitClone(directory string) (string, error) {
 	var stdErrBuf bytes.Buffer
 	url := fmt.Sprintf("https://github.com/%s/kubernetes-marketplace.git", marketplaceAccount)
@@ -388,7 +388,7 @@ func UpdateAppsCacheIfStale() (bool, error) {
 	// when the apps are outdated
 	bp, err := GetKubemartPaths()
 	if err != nil {
-		return false, fmt.Errorf("Unable to load kubemart paths - %v", err)
+		return false, fmt.Errorf("unable to load kubemart paths - %v", err)
 	}
 
 	appsFolder := bp.AppsDirectoryPath
@@ -402,7 +402,7 @@ func UpdateAppsCacheIfStale() (bool, error) {
 
 	err = UpdateConfigFileLastUpdatedTimestamp()
 	if err != nil {
-		return false, fmt.Errorf("Unable to config file's timestamp field - %v", err)
+		return false, fmt.Errorf("unable to config file's timestamp field - %v", err)
 	}
 
 	DebugPrintf("Config file's timestamp field updated successfully")
@@ -427,18 +427,18 @@ func GitLatestCommitHash(directory string) (string, error) {
 	return string(out), nil
 }
 
-// GetPostInstallMarkdown will fetch app's post_install.md and return it
+// GetPostInstallMarkdown will fetch app's post_install.md and return it as string
 func GetPostInstallMarkdown(appName string) (string, error) {
 	bp, err := GetKubemartPaths()
 	if err != nil {
-		return "", fmt.Errorf("Unable to get kubemart paths - %v", err.Error())
+		return "", fmt.Errorf("unable to get kubemart paths - %v", err.Error())
 	}
 
 	appManifestPath := filepath.Join(bp.AppsDirectoryPath, appName, "post_install.md")
 	DebugPrintf("App post install file - %s\n", appManifestPath)
 	file, err := ioutil.ReadFile(appManifestPath)
 	if err != nil {
-		return "", fmt.Errorf("Unable to load post-install notes for this app - %v", err.Error())
+		return "", fmt.Errorf("unable to load post-install notes for this app - %v", err.Error())
 	}
 
 	if runtime.GOOS == "windows" {
@@ -447,7 +447,7 @@ func GetPostInstallMarkdown(appName string) (string, error) {
 
 	out, err := glamour.Render(string(file), "dark")
 	if err != nil {
-		return out, fmt.Errorf("Unable to format the post-install - %v", err.Error())
+		return out, fmt.Errorf("unable to format the post-install - %v", err.Error())
 	}
 
 	return out, nil
@@ -493,7 +493,8 @@ func GetAppPlans(appName string) ([]int, error) {
 	return plans, nil
 }
 
-// GetSmallestAppPlan take plans slice e.g. [20,5,10] and return 5 (int)
+// GetSmallestAppPlan take sorted plans slice e.g. [5,10,20] and return
+// the smallest one e.g. 5 (int)
 func GetSmallestAppPlan(sortedPlans []int) int {
 	return sortedPlans[0]
 }
@@ -510,7 +511,6 @@ func GetKubeconfig() clientcmd.ClientConfig {
 // GetRESTConfig returns the kubeconfig's REST config
 func GetRESTConfig() (*rest.Config, error) {
 	kubeConfig := GetKubeconfig()
-	restConfig := &rest.Config{}
 	restConfig, err := kubeConfig.ClientConfig()
 	if err != nil {
 		return restConfig, err
@@ -526,7 +526,7 @@ func GetConfigAccess() clientcmd.ConfigAccess {
 	return configAccess
 }
 
-// GetCurrentContext return current context
+// GetCurrentContext returns current/active kubeconfig context
 func GetCurrentContext() (string, error) {
 	configAccess := GetConfigAccess()
 	config, err := configAccess.GetStartingConfig()
@@ -538,7 +538,7 @@ func GetCurrentContext() (string, error) {
 	return currentContext, nil
 }
 
-// GetClusterName return the kubeconfig's cluster name
+// GetClusterName returns current/active kubeconfig cluster name
 func GetClusterName() (string, error) {
 	currentContext, err := GetCurrentContext()
 	if err != nil {
@@ -555,7 +555,8 @@ func GetClusterName() (string, error) {
 	return clusterName, nil
 }
 
-// ExtractIPAddressFromURL takes URL (procotol://IP:port) and returns IP
+// ExtractIPAddressFromURL takes URL (procotol://IP:port) and returns IP.
+// Examples: https://rubular.com/r/6Cr6napQqpxuFq.
 func ExtractIPAddressFromURL(url string) (string, error) {
 	r, err := regexp.Compile(`\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b`)
 	if err != nil {
@@ -572,6 +573,7 @@ func ExtractIPAddressFromURL(url string) (string, error) {
 
 // ExtractPlanIntFromPlanStr takes plan string i.e. "5Gi" and return 5 (int).
 // If something goes wrong, it will return -1 (int).
+// Examples: https://rubular.com/r/TJEKzuZJrNaSuV.
 func ExtractPlanIntFromPlanStr(input string) (output int) {
 	r, err := regexp.Compile(`[0-9]+`)
 	if err != nil {
@@ -591,7 +593,8 @@ func ExtractPlanIntFromPlanStr(input string) (output int) {
 	return output
 }
 
-// ExtractVersionFromContainerImage ...
+// ExtractVersionFromContainerImage takes Docker image name e.g.
+// 'nginx:1.2.3' and returns the version/tag e.g. '1.2.3'
 func ExtractVersionFromContainerImage(image string) string {
 	splitted := strings.Split(image, ":")
 	if len(splitted) == 2 {
@@ -601,12 +604,13 @@ func ExtractVersionFromContainerImage(image string) string {
 	return ""
 }
 
-// SanitizeVersionSegment ...
+// SanitizeVersionSegment removes special characters from semver segment.
 // Sometimes, k8s server minor version contains special characters
 // e.g. 1.21+ (for v1.21.0-beta.0). This function will exclude all special
 // characters from a version segment. For instance, if the input
 // is "21+" (using minor segment as example here), this function will
 // return "21" so we can parse it to integer without any issues.
+// Examples: https://rubular.com/r/heUrGIZUOVhDIk.
 func SanitizeVersionSegment(input string) string {
 	re := regexp.MustCompile("[0-9]+")
 	cleanedArr := re.FindAllString(input, -1)
@@ -616,7 +620,6 @@ func SanitizeVersionSegment(input string) string {
 // GetMasterIP returns the master/control-plane IP address
 func GetMasterIP() (string, error) {
 	kubeConfig := GetKubeconfig()
-	restConfig := &rest.Config{}
 	restConfig, err := kubeConfig.ClientConfig()
 	if err != nil {
 		return "", err
@@ -625,7 +628,8 @@ func GetMasterIP() (string, error) {
 	return ExtractIPAddressFromURL(serverURL)
 }
 
-// IsCRDExist ...
+// IsCRDExist will search for a CRD by crdName and returns 'true'
+// if it exists. Otherwise, it will returns 'false'.
 func IsCRDExist(crdName string) bool {
 	clientset, err := GetKubeAPIExtensionClientSet()
 	if err != nil {
@@ -634,14 +638,10 @@ func IsCRDExist(crdName string) bool {
 
 	crdClient := clientset.ApiextensionsV1().CustomResourceDefinitions()
 	_, err = crdClient.Get(context.Background(), crdName, metav1.GetOptions{})
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
-// ApplyManifests ...
+// ApplyManifests takes k8s YAML manifests and apply them using SSA
 func ApplyManifests(manifests []string) error {
 	for _, manifest := range manifests {
 		operatorYAMLBytes := []byte(manifest)
@@ -656,7 +656,7 @@ func ApplyManifests(manifests []string) error {
 	return nil
 }
 
-// DeleteManifests ...
+// DeleteManifests takes k8s YAML manifests and delete them using SSA
 func DeleteManifests(manifests []string) error {
 	for _, manifest := range manifests {
 		operatorYAMLBytes := []byte(manifest)
@@ -671,7 +671,7 @@ func DeleteManifests(manifests []string) error {
 	return nil
 }
 
-// ExecuteSSA ...
+// ExecuteSSA will apply/delete k8s YAML manifests (yamlData) using Server Side Apply.
 // Inspired from: https://bit.ly/3b6tB6y
 func ExecuteSSA(yamlData []byte, action *manifestOperation, owner string) error {
 	DebugPrintf("==========\n")
@@ -788,7 +788,7 @@ func ExecuteSSA(yamlData []byte, action *manifestOperation, owner string) error 
 	return err
 }
 
-// GetKubeServerVersion ...
+// GetKubeServerVersion returns user's k8s server version object
 func GetKubeServerVersion() (*version.Info, error) {
 	v := &version.Info{}
 
@@ -805,7 +805,8 @@ func GetKubeServerVersion() (*version.Info, error) {
 	return dc.ServerVersion()
 }
 
-// GetKubeServerVersionHuman ...
+// GetKubeServerVersionHuman returns user's server version
+// in human readable format (string) e.g. 'v1.19.1'
 func GetKubeServerVersionHuman() (string, error) {
 	version, err := GetKubeServerVersion()
 	if err != nil {
@@ -815,7 +816,9 @@ func GetKubeServerVersionHuman() (string, error) {
 	return version.GitVersion, nil
 }
 
-// GetKubeServerVersionCombined ...
+// GetKubeServerVersionCombined returns user's server version
+// in combined format (int). For example, if user has v1.19.1 running,
+// this function will return 119.
 func GetKubeServerVersionCombined() (int, error) {
 	version, err := GetKubeServerVersion()
 	if err != nil {
@@ -836,7 +839,9 @@ func GetKubeServerVersionCombined() (int, error) {
 	return vInt, nil
 }
 
-// GetInstalledOperatorVersion ...
+// GetInstalledOperatorVersion will return the installed operator
+// container image version. For example, if it's declared as 'kubemart/kubemart-operator:v0.0.45'
+// in the k8s YAML manifest, this function will return 'v0.0.45'.
 func GetInstalledOperatorVersion() (string, error) {
 	cs, err := GetKubeClientSet()
 	if err != nil {
@@ -857,10 +862,11 @@ func GetInstalledOperatorVersion() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("Manager container not found")
+	return "", fmt.Errorf("manager container not found")
 }
 
-// IsAppExist ...
+// IsAppExist returns 'true' if the lookup app exists
+// in ~/.kubemart/apps folder. Otherwise, it returns 'false'.
 func IsAppExist(appName string) bool {
 	bp, err := GetKubemartPaths()
 	if err != nil {
@@ -874,7 +880,8 @@ func IsAppExist(appName string) bool {
 	return false
 }
 
-// GetLatestOperatorReleaseVersion ...
+// GetLatestOperatorReleaseVersion will fetch the latest operator release
+// and returns its version e.g. 'v0.0.48'
 func GetLatestOperatorReleaseVersion() (string, error) {
 	response, err := http.Get("https://api.github.com/repos/kubemart/kubemart-operator/releases/latest")
 	if err != nil {
@@ -892,7 +899,8 @@ func GetLatestOperatorReleaseVersion() (string, error) {
 	return latestRelease.TagName, nil
 }
 
-// GetLatestManifests ...
+// GetLatestManifests will download the latest operator release file (kubemart-operator.yaml)
+// and returns its content (all YAMLs are combined) as string
 func GetLatestManifests() (string, error) {
 	var manifests string
 
@@ -915,7 +923,7 @@ func GetLatestManifests() (string, error) {
 	}
 
 	if n == 0 {
-		return manifests, fmt.Errorf("Manifests are empty")
+		return manifests, fmt.Errorf("manifests are empty")
 	}
 
 	manifests = buf.String()

@@ -31,14 +31,14 @@ var systemUpgradeCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		operatorYAML, err := utils.GetLatestManifests()
 		if err != nil {
-			return fmt.Errorf("Unable to download latest manifests - %v", err)
+			return fmt.Errorf("unable to download latest manifests - %v", err)
 		}
 
 		fmt.Println("Upgrading Kubemart components...")
 		manifests := strings.Split(operatorYAML, "---")
 		err = utils.ApplyManifests(manifests)
 		if err != nil {
-			return fmt.Errorf("Unable to apply manifest upgrade - %v", err)
+			return fmt.Errorf("unable to apply manifest upgrade - %v", err)
 		}
 
 		fmt.Println("Upgrade complete successfully")

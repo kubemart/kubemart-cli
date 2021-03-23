@@ -38,7 +38,7 @@ var initCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		masterIP, err := utils.GetMasterIP()
 		if err != nil {
-			return fmt.Errorf("Unable to determine master node IP address - %v", err)
+			return fmt.Errorf("unable to determine master node IP address - %v", err)
 		}
 
 		if DomainName == "" {
@@ -47,7 +47,7 @@ var initCmd = &cobra.Command{
 
 		clusterName, err := utils.GetClusterName()
 		if err != nil {
-			return fmt.Errorf("Unable to determine cluster name - %v", err)
+			return fmt.Errorf("unable to determine cluster name - %v", err)
 		}
 
 		bcm := &utils.KubemartConfigMap{
@@ -65,7 +65,7 @@ var initCmd = &cobra.Command{
 
 		kubemartPaths, err := utils.GetKubemartPaths()
 		if err != nil {
-			return fmt.Errorf("Unable to load Kubemart paths - %v", err.Error())
+			return fmt.Errorf("unable to load Kubemart paths - %v", err.Error())
 		}
 
 		kubemartDirPath := kubemartPaths.RootDirectoryPath
@@ -78,65 +78,65 @@ var initCmd = &cobra.Command{
 			// Create apps folder
 			err = os.MkdirAll(appsDirPath, 0755)
 			if err != nil {
-				return fmt.Errorf("Unable to create ~/.kubemart/apps directory ($ mkdir -p ~/.kubemart/apps)")
+				return fmt.Errorf("unable to create ~/.kubemart/apps directory ($ mkdir -p ~/.kubemart/apps)")
 			}
 
 			// Create config.json file
 			_, err := os.Create(configFilePath)
 			if err != nil {
-				return fmt.Errorf("Unable to create ~/.kubemart/config.json file")
+				return fmt.Errorf("unable to create ~/.kubemart/config.json file")
 			}
 
 			// Clone
 			cloneOutput, err := utils.GitClone(appsDirPath)
 			if err != nil {
-				return fmt.Errorf("Unable to clone marketplace - %v", err)
+				return fmt.Errorf("unable to clone marketplace - %v", err)
 			}
 			utils.DebugPrintf("Clone output: %s\n", cloneOutput)
 
 			// Update timestamp
 			err = utils.UpdateConfigFileLastUpdatedTimestamp()
 			if err != nil {
-				return fmt.Errorf("Unable to config file's timestamp field - %v", err)
+				return fmt.Errorf("unable to config file's timestamp field - %v", err)
 			}
 		}
 
 		namespaceExists, err := utils.IsNamespaceExist("kubemart-system")
 		if err != nil {
-			return fmt.Errorf("Unable to check namespace - %v", err.Error())
+			return fmt.Errorf("unable to check namespace - %v", err.Error())
 		}
 
 		if !namespaceExists {
 			fmt.Println("Creating Namespace (for operator)...")
 			err = utils.CreateKubemartNamespace()
 			if err != nil {
-				return fmt.Errorf("Unable to create namespace - %v", err.Error())
+				return fmt.Errorf("unable to create namespace - %v", err.Error())
 			}
 		}
 
 		configMapExists, err := utils.IsKubemartConfigMapExist()
 		if err != nil {
-			return fmt.Errorf("Unable to check ConfigMap - %v", err.Error())
+			return fmt.Errorf("unable to check ConfigMap - %v", err.Error())
 		}
 
 		if !configMapExists {
 			fmt.Println("Creating ConfigMap (for operator)...")
 			err = utils.CreateKubemartConfigMap(bcm)
 			if err != nil {
-				return fmt.Errorf("Unable to create ConfigMap - %v", err.Error())
+				return fmt.Errorf("unable to create ConfigMap - %v", err.Error())
 			}
 		}
 
 		fmt.Println("Applying manifests...")
 		operatorYAML, err := utils.GetLatestManifests()
 		if err != nil {
-			return fmt.Errorf("Unable to download latest manifests - %v", err.Error())
+			return fmt.Errorf("unable to download latest manifests - %v", err.Error())
 		}
 
 		manifests := strings.Split(operatorYAML, "---")
 		err = utils.ApplyManifests(manifests)
 		if err != nil {
-			return fmt.Errorf("Unable to apply manifest - %v", err.Error())
+			return fmt.Errorf("unable to apply manifest - %v", err.Error())
 		}
 
 		fmt.Println("You are good to go")

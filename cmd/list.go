@@ -41,7 +41,7 @@ var listCmd = &cobra.Command{
 		path := dir.AppsDirectoryPath
 		files, err := ioutil.ReadDir(path)
 		if err != nil {
-			return fmt.Errorf("Unable parse get list of files - %v", err)
+			return fmt.Errorf("unable parse get list of files - %v", err)
 		}
 		apps := []string{}
 		for _, file := range files {
@@ -49,7 +49,7 @@ var listCmd = &cobra.Command{
 			filePath := fmt.Sprintf("%s/%s", path, fileName)
 			fileInfo, err := os.Stat(filePath)
 			if err != nil {
-				return fmt.Errorf("Unable to locate file - %v", err)
+				return fmt.Errorf("unable to locate file - %v", err)
 			}
 			if fileInfo.IsDir() && isValid(fileName) {
 				apps = append(apps, fileName)
@@ -61,6 +61,8 @@ var listCmd = &cobra.Command{
 	},
 }
 
+// isValid returns true if the folder is not a hidden folder
+// and not part of excluded items e.g. 'bin' folder
 func isValid(folderName string) bool {
 	isHidden := isHidden(folderName)
 	if isHidden {
@@ -75,12 +77,10 @@ func isValid(folderName string) bool {
 	return true
 }
 
+// isHidden returns 'true' if the folder starts with '.' (dot)
 func isHidden(folderName string) bool {
 	firstCharacter := folderName[0:1]
-	if firstCharacter == "." {
-		return true
-	}
-	return false
+	return firstCharacter == "."
 }
 
 func init() {
