@@ -61,6 +61,8 @@ var listCmd = &cobra.Command{
 	},
 }
 
+// isValid returns true if the folder is not a hidden folder
+// and not part of excluded items e.g. 'bin' folder
 func isValid(folderName string) bool {
 	isHidden := isHidden(folderName)
 	if isHidden {
@@ -75,6 +77,7 @@ func isValid(folderName string) bool {
 	return true
 }
 
+// isHidden returns 'true' if the folder starts with '.' (dot)
 func isHidden(folderName string) bool {
 	firstCharacter := folderName[0:1]
 	return firstCharacter == "."
