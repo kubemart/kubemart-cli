@@ -50,7 +50,7 @@ var uninstallCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(uninstallCmd)
+	KubemartRootCmd.AddCommand(uninstallCmd)
 
 	// Here you will define your flags and configuration settings.
 

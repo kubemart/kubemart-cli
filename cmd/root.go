@@ -27,8 +27,8 @@ var kubeCfgFile string
 var debug bool
 var canSkipUpdateApps map[string]bool
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
+// KubemartRootCmd represents the base command when called without any subcommands
+var KubemartRootCmd = &cobra.Command{
 	Use: "kubemart",
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
@@ -52,9 +52,9 @@ var rootCmd = &cobra.Command{
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
+// This is called by main.main(). It only needs to happen once to the KubemartRootCmd.
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := KubemartRootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
@@ -64,16 +64,16 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVarP(&kubeCfgFile, "kubeconfig", "k", "", "kubeconfig file")
-	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "print verbose logs when running command")
-	rootCmd.SetHelpCommand(&cobra.Command{Use: "no-help", Hidden: true}) // disable "kubemart help <command>"
+	KubemartRootCmd.PersistentFlags().StringVarP(&kubeCfgFile, "kubeconfig", "k", "", "kubeconfig file")
+	KubemartRootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "print verbose logs when running command")
+	KubemartRootCmd.SetHelpCommand(&cobra.Command{Use: "no-help", Hidden: true}) // disable "kubemart help <command>"
 
 	// https://github.com/spf13/cobra/issues/340
-	rootCmd.SilenceUsage = true
+	KubemartRootCmd.SilenceUsage = true
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// KubemartRootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
 	cobra.OnInitialize(replaceKubeconfigEnvIfFlagIsPresent)
 	cobra.OnInitialize(setLogLevelEnvIfFlagIsTrue)

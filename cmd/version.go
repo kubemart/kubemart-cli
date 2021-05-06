@@ -104,7 +104,7 @@ var (
 )
 
 func init() {
-	rootCmd.AddCommand(versionCmd)
+	KubemartRootCmd.AddCommand(versionCmd)
 	versionCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "display simple output")
 	versionCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "display full information")
 }

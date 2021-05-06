@@ -46,7 +46,7 @@ var updateCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(updateCmd)
+	KubemartRootCmd.AddCommand(updateCmd)
 
 	// Here you will define your flags and configuration settings.
 

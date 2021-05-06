@@ -47,7 +47,7 @@ var systemUpgradeCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(systemUpgradeCmd)
+	KubemartRootCmd.AddCommand(systemUpgradeCmd)
 
 	// Here you will define your flags and configuration settings.
 

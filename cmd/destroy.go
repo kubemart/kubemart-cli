@@ -94,7 +94,7 @@ var destroyCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(destroyCmd)
+	KubemartRootCmd.AddCommand(destroyCmd)
 	destroyCmd.Flags().BoolVarP(&proceedWithoutPrompt, "yes", "y", false, "skip interactive y/n prompt by answering 'y'")
 
 	// Here you will define your flags and configuration settings.

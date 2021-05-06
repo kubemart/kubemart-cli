@@ -90,7 +90,7 @@ var installCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(installCmd)
+	KubemartRootCmd.AddCommand(installCmd)
 	installCmd.Flags().IntVarP(&Plan, "plan", "p", 0, "storage plan for the app (in GB) e.g. '5' for 5GB")
 	installCmd.Flags().BoolVarP(&hidePostInstall, "quiet", "q", false, "do not show post-install message")
 

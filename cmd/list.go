@@ -84,7 +84,7 @@ func isHidden(folderName string) bool {
 }
 
 func init() {
-	rootCmd.AddCommand(listCmd)
+	KubemartRootCmd.AddCommand(listCmd)
 
 	// Here you will define your flags and configuration settings.
 

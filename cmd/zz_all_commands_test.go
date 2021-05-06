@@ -20,10 +20,10 @@ import (
 
 func TestDestroyPrompt(t *testing.T) {
 	actual, _ := test.RecordStdOutStdErr(func() {
-		rootCmd.SetArgs([]string{
+		KubemartRootCmd.SetArgs([]string{
 			"destroy",
 		})
-		rootCmd.ExecuteC()
+		KubemartRootCmd.ExecuteC()
 	})
 
 	expected := "Are you sure want to delete ALL apps and completely remove"
@@ -35,11 +35,11 @@ func TestDestroyPrompt(t *testing.T) {
 
 func TestDestroyBeforeInstall(t *testing.T) {
 	actual, _ := test.RecordStdOutStdErr(func() {
-		rootCmd.SetArgs([]string{
+		KubemartRootCmd.SetArgs([]string{
 			"destroy",
 			"--yes",
 		})
-		rootCmd.Execute()
+		KubemartRootCmd.Execute()
 	})
 
 	expected := "All done"
@@ -50,10 +50,10 @@ func TestDestroyBeforeInstall(t *testing.T) {
 
 func TestInitWithoutEmail(t *testing.T) {
 	_, actual := test.RecordStdOutStdErr(func() {
-		rootCmd.SetArgs([]string{
+		KubemartRootCmd.SetArgs([]string{
 			"init",
 		})
-		rootCmd.Execute()
+		KubemartRootCmd.Execute()
 	})
 
 	expected := "Error: required flag(s) \"email\" not set"
@@ -65,12 +65,12 @@ func TestInitWithoutEmail(t *testing.T) {
 func TestInitWithEmail(t *testing.T) {
 	if test.HasNamespaceGone("kubemart-system") {
 		actual, _ := test.RecordStdOutStdErr(func() {
-			rootCmd.SetArgs([]string{
+			KubemartRootCmd.SetArgs([]string{
 				"init",
 				"--email",
 				"test@example.com",
 			})
-			rootCmd.Execute()
+			KubemartRootCmd.Execute()
 		})
 
 		expected := "You are good to go"
@@ -84,11 +84,11 @@ func TestInitWithEmail(t *testing.T) {
 
 func TestDestroyAfterInstall(t *testing.T) {
 	actual, _ := test.RecordStdOutStdErr(func() {
-		rootCmd.SetArgs([]string{
+		KubemartRootCmd.SetArgs([]string{
 			"destroy",
 			"--yes",
 		})
-		rootCmd.Execute()
+		KubemartRootCmd.Execute()
 	})
 
 	expected := "All done"
@@ -100,14 +100,14 @@ func TestDestroyAfterInstall(t *testing.T) {
 func TestInitWithEmailAndDomain(t *testing.T) {
 	if test.HasNamespaceGone("kubemart-system") {
 		actual, _ := test.RecordStdOutStdErr(func() {
-			rootCmd.SetArgs([]string{
+			KubemartRootCmd.SetArgs([]string{
 				"init",
 				"--email",
 				"test@example.com",
 				"--domain-name",
 				"example.com",
 			})
-			rootCmd.Execute()
+			KubemartRootCmd.Execute()
 		})
 
 		expected := "You are good to go"
@@ -121,11 +121,11 @@ func TestInitWithEmailAndDomain(t *testing.T) {
 
 func TestInstall(t *testing.T) {
 	actual, _ := test.RecordStdOutStdErr(func() {
-		rootCmd.SetArgs([]string{
+		KubemartRootCmd.SetArgs([]string{
 			"install",
 			"rabbitmq",
 		})
-		rootCmd.Execute()
+		KubemartRootCmd.Execute()
 	})
 
 	expected1 := "App created successfully"
@@ -141,10 +141,10 @@ func TestInstall(t *testing.T) {
 
 func TestInstalled(t *testing.T) {
 	actual, _ := test.RecordStdOutStdErr(func() {
-		rootCmd.SetArgs([]string{
+		KubemartRootCmd.SetArgs([]string{
 			"installed",
 		})
-		rootCmd.Execute()
+		KubemartRootCmd.Execute()
 	})
 
 	expected := "rabbitmq"
@@ -155,10 +155,10 @@ func TestInstalled(t *testing.T) {
 
 func TestList(t *testing.T) {
 	actual, _ := test.RecordStdOutStdErr(func() {
-		rootCmd.SetArgs([]string{
+		KubemartRootCmd.SetArgs([]string{
 			"list",
 		})
-		rootCmd.Execute()
+		KubemartRootCmd.Execute()
 	})
 
 	expected := "longhorn"
@@ -169,10 +169,10 @@ func TestList(t *testing.T) {
 
 func TestSystemUpgrade(t *testing.T) {
 	actual, _ := test.RecordStdOutStdErr(func() {
-		rootCmd.SetArgs([]string{
+		KubemartRootCmd.SetArgs([]string{
 			"system-upgrade",
 		})
-		rootCmd.Execute()
+		KubemartRootCmd.Execute()
 	})
 
 	expected := "Upgrade complete successfully"
@@ -183,11 +183,11 @@ func TestSystemUpgrade(t *testing.T) {
 
 func TestUninstall(t *testing.T) {
 	actual, _ := test.RecordStdOutStdErr(func() {
-		rootCmd.SetArgs([]string{
+		KubemartRootCmd.SetArgs([]string{
 			"uninstall",
 			"rabbitmq",
 		})
-		rootCmd.Execute()
+		KubemartRootCmd.Execute()
 	})
 
 	expected := "rabbitmq app is now scheduled to be deleted"
@@ -222,20 +222,20 @@ func TestUpdate(t *testing.T) {
 	if canInstall {
 		// install again because we run uninstall in previous test
 		_, _ = test.RecordStdOutStdErr(func() {
-			rootCmd.SetArgs([]string{
+			KubemartRootCmd.SetArgs([]string{
 				"install",
 				appName,
 			})
-			rootCmd.Execute()
+			KubemartRootCmd.Execute()
 		})
 
 		// update the app
 		_, actual := test.RecordStdOutStdErr(func() {
-			rootCmd.SetArgs([]string{
+			KubemartRootCmd.SetArgs([]string{
 				"update",
 				appName,
 			})
-			rootCmd.Execute()
+			KubemartRootCmd.Execute()
 		})
 
 		expected := "no new update available for this app"
@@ -249,11 +249,11 @@ func TestUpdate(t *testing.T) {
 
 func TestVersion(t *testing.T) {
 	out, _ := test.RecordStdOutStdErr(func() {
-		rootCmd.SetArgs([]string{
+		KubemartRootCmd.SetArgs([]string{
 			"version",
 			"--quiet",
 		})
-		rootCmd.Execute()
+		KubemartRootCmd.Execute()
 	})
 
 	actual := strings.Trim(out, "\r\n")
@@ -265,11 +265,11 @@ func TestVersion(t *testing.T) {
 
 func TestVersionVerbose(t *testing.T) {
 	actual, _ := test.RecordStdOutStdErr(func() {
-		rootCmd.SetArgs([]string{
+		KubemartRootCmd.SetArgs([]string{
 			"version",
 			"--verbose",
 		})
-		rootCmd.Execute()
+		KubemartRootCmd.Execute()
 	})
 
 	expected := "App CRD status: created"
@@ -283,14 +283,14 @@ func TestInstallAppWithPlan(t *testing.T) {
 	plan := 10
 
 	actual, _ := test.RecordStdOutStdErr(func() {
-		rootCmd.SetArgs([]string{
+		KubemartRootCmd.SetArgs([]string{
 			"install",
 			appName,
 			"--plan",
 			strconv.Itoa(plan),
 			"--quiet",
 		})
-		rootCmd.Execute()
+		KubemartRootCmd.Execute()
 	})
 
 	expected := "App created successfully"

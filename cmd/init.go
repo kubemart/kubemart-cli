@@ -145,7 +145,7 @@ var initCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(initCmd)
+	KubemartRootCmd.AddCommand(initCmd)
 	initCmd.Flags().StringVarP(&Email, "email", "e", "", "email address (required)")
 	initCmd.Flags().StringVarP(&DomainName, "domain-name", "n", "", "domain name (will default to master_ip.xip.io if not supplied)")
 	initCmd.MarkFlagRequired("email")

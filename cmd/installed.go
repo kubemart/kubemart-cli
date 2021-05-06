@@ -70,7 +70,7 @@ var installedCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(installedCmd)
+	KubemartRootCmd.AddCommand(installedCmd)
 
 	// Here you will define your flags and configuration settings.
 
