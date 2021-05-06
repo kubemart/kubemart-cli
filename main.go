@@ -15,7 +15,7 @@ limitations under the License.
 */
 package main
 
-import "github.com/kubemart/kubemart/cmd"
+import "github.com/kubemart/kubemart-cli/cmd"
 
 func main() {
 	cmd.Execute()

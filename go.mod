@@ -1,4 +1,4 @@
-module github.com/kubemart/kubemart
+module github.com/kubemart/kubemart-cli
 
 go 1.16
 

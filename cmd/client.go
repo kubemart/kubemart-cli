@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/kubemart/kubemart-cli/pkg/utils"
 	operator "github.com/kubemart/kubemart-operator/api/v1alpha1"
-	"github.com/kubemart/kubemart/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"

@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubemart/kubemart/test"
+	"github.com/kubemart/kubemart-cli/test"
 )
 
 func TestDestroyPrompt(t *testing.T) {
