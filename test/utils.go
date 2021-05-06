@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kubemart/kubemart/pkg/utils"
+	"github.com/kubemart/kubemart-cli/pkg/utils"
 )
 
 // HasNamespaceGone will wait until the namespace gets completely deleted

@@ -21,7 +21,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kubemart/kubemart/pkg/utils"
+	"github.com/kubemart/kubemart-cli/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
