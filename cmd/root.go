@@ -29,9 +29,8 @@ var canSkipUpdateApps map[string]bool
 
 // KubemartRootCmd represents the base command when called without any subcommands
 var KubemartRootCmd = &cobra.Command{
-	Use: "kubemart",
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
+	Use:   "kubemart",
+	Short: "Manage apps in your Kubernetes cluster",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		canSkipUpdateApps = make(map[string]bool)
 		canSkipUpdateApps["destroy"] = true
