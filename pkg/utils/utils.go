@@ -501,34 +501,70 @@ func GetSmallestAppPlan(sortedPlans []int) int {
 
 // GetKubeconfig will load kubeconfig from KUBECONFIG environment variable.
 // If it's empty, it will load from ~/.kube/config file.
-func GetKubeconfig() clientcmd.ClientConfig {
+func GetKubeconfig() (clientcmd.ClientConfig, error) {
+	var cc clientcmd.ClientConfig
+
+	val, present := os.LookupEnv("KUBECONFIG")
+	if present {
+		file, err := os.Open(val)
+		if err != nil {
+			fmt.Printf("Unable to open kubeconfig file (%s). Perhaps it's empty?\n", val)
+			return cc, err
+		}
+
+		fileinfo, _ := file.Stat()
+		if err != nil {
+			fmt.Printf("Unable to retrieve kubeconfig file (%s) info\n", val)
+			return cc, err
+		}
+
+		if fileinfo.Size() == 0 {
+			fmt.Printf("Kubeconfig file (%s) is empty\n", val)
+			return cc, err
+		}
+	}
+
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	configOverrides := &clientcmd.ConfigOverrides{}
 	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
-	return kubeConfig
+	return kubeConfig, nil
 }
 
 // GetRESTConfig returns the kubeconfig's REST config
 func GetRESTConfig() (*rest.Config, error) {
-	kubeConfig := GetKubeconfig()
+	var rc *rest.Config
+	kubeConfig, err := GetKubeconfig()
+	if err != nil {
+		return rc, err
+	}
+
 	restConfig, err := kubeConfig.ClientConfig()
 	if err != nil {
-		return restConfig, err
+		return rc, err
 	}
 	DebugPrintf("Loading REST config for host %v\n", restConfig.Host)
 	return restConfig, nil
 }
 
 // GetConfigAccess returns ConfigAccess
-func GetConfigAccess() clientcmd.ConfigAccess {
-	kubeConfig := GetKubeconfig()
+func GetConfigAccess() (clientcmd.ConfigAccess, error) {
+	var ca clientcmd.ConfigAccess
+	kubeConfig, err := GetKubeconfig()
+	if err != nil {
+		return ca, err
+	}
+
 	configAccess := kubeConfig.ConfigAccess()
-	return configAccess
+	return configAccess, nil
 }
 
 // GetCurrentContext returns current/active kubeconfig context
 func GetCurrentContext() (string, error) {
-	configAccess := GetConfigAccess()
+	configAccess, err := GetConfigAccess()
+	if err != nil {
+		return "", err
+	}
+
 	config, err := configAccess.GetStartingConfig()
 	if err != nil {
 		return "", err
@@ -545,7 +581,11 @@ func GetClusterName() (string, error) {
 		return "", err
 	}
 
-	configAccess := GetConfigAccess()
+	configAccess, err := GetConfigAccess()
+	if err != nil {
+		return "", err
+	}
+
 	config, err := configAccess.GetStartingConfig()
 	if err != nil {
 		return "", err
@@ -619,7 +659,11 @@ func SanitizeVersionSegment(input string) string {
 
 // GetMasterIP returns the master/control-plane IP address
 func GetMasterIP() (string, error) {
-	kubeConfig := GetKubeconfig()
+	kubeConfig, err := GetKubeconfig()
+	if err != nil {
+		return "", err
+	}
+
 	restConfig, err := kubeConfig.ClientConfig()
 	if err != nil {
 		return "", err

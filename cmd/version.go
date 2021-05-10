@@ -24,6 +24,9 @@ var (
 	// DateCli is set from outside using ldflags
 	DateCli = "unknown"
 
+	// ShowNewVersion is set from outside using ldflags
+	ShowNewVersion = "yes"
+
 	versionCmd = &cobra.Command{
 		Use:     "version",
 		Example: "kubemart version",
@@ -44,36 +47,41 @@ var (
 				fmt.Printf("OS/Arch (client): %s/%s\n", runtime.GOOS, runtime.GOARCH)
 				fmt.Println("---")
 
-				serverVersion, _ := utils.GetKubeServerVersionHuman()
-				fmt.Printf("Kubernetes version: %s\n", serverVersion)
+				_, err := utils.GetRESTConfig()
+				if err == nil {
+					serverVersion, _ := utils.GetKubeServerVersionHuman()
+					fmt.Printf("Kubernetes version: %s\n", serverVersion)
 
-				operatorVersion, _ := utils.GetInstalledOperatorVersion()
-				fmt.Printf("Operator version: %s\n", operatorVersion)
+					operatorVersion, _ := utils.GetInstalledOperatorVersion()
+					fmt.Printf("Operator version: %s\n", operatorVersion)
 
-				isAppCRDInstalled := "not created"
-				isJobWatcherCRDInstalled := "not created"
-				if utils.IsCRDExist("apps.kubemart.civo.com") {
-					isAppCRDInstalled = "created"
-				}
-				if utils.IsCRDExist("jobwatchers.kubemart.civo.com") {
-					isJobWatcherCRDInstalled = "created"
-				}
-				fmt.Printf("App CRD status: %s\n", isAppCRDInstalled)
-				fmt.Printf("JobWatcher CRD status: %s\n", isJobWatcherCRDInstalled)
+					isAppCRDInstalled := "not created"
+					isJobWatcherCRDInstalled := "not created"
+					if utils.IsCRDExist("apps.kubemart.civo.com") {
+						isAppCRDInstalled = "created"
+					}
+					if utils.IsCRDExist("jobwatchers.kubemart.civo.com") {
+						isJobWatcherCRDInstalled = "created"
+					}
+					fmt.Printf("App CRD status: %s\n", isAppCRDInstalled)
+					fmt.Printf("JobWatcher CRD status: %s\n", isJobWatcherCRDInstalled)
 
-				namespaceStatus := "not created"
-				isNamespaceExist, _ := utils.IsNamespaceExist("kubemart-system")
-				if isNamespaceExist {
-					namespaceStatus = "created"
-				}
-				fmt.Printf("Namespace (kubemart-system) status: %s\n", namespaceStatus)
+					namespaceStatus := "not created"
+					isNamespaceExist, _ := utils.IsNamespaceExist("kubemart-system")
+					if isNamespaceExist {
+						namespaceStatus = "created"
+					}
+					fmt.Printf("Namespace (kubemart-system) status: %s\n", namespaceStatus)
 
-				configMapStatus := "not created"
-				cmExists, _ := utils.IsKubemartConfigMapExist()
-				if cmExists {
-					configMapStatus = "created"
+					configMapStatus := "not created"
+					cmExists, _ := utils.IsKubemartConfigMapExist()
+					if cmExists {
+						configMapStatus = "created"
+					}
+					fmt.Printf("ConfigMap (kubemart-config) status: %s\n", configMapStatus)
+				} else {
+					fmt.Println("Unable to check server-side components. Please check your kubeconfig file.")
 				}
-				fmt.Printf("ConfigMap (kubemart-config) status: %s\n", configMapStatus)
 
 				res, err := latest.Check(githubTag, strings.Replace(VersionCli, "v", "", 1))
 				if err != nil {
@@ -81,7 +89,7 @@ var (
 					os.Exit(1)
 				}
 
-				if res.Outdated {
+				if res.Outdated && ShowNewVersion == "yes" {
 					fmt.Printf("\nFYI, a newer Kubemart CLI version (v%s) is available, please upgrade\n", res.Current)
 				}
 			case quiet:
@@ -95,7 +103,7 @@ var (
 					os.Exit(1)
 				}
 
-				if res.Outdated {
+				if res.Outdated && ShowNewVersion == "yes" {
 					fmt.Printf("\nFYI, a newer Kubemart CLI version (v%s) is available, please upgrade\n", res.Current)
 				}
 			}
