@@ -80,7 +80,7 @@ var (
 					}
 					fmt.Printf("ConfigMap (kubemart-config) status: %s\n", configMapStatus)
 				} else {
-					fmt.Println("Unable to check server-side components. Please check your kubeconfig file.")
+					fmt.Println("Unable to check server-side components. Please check your kubeconfig.")
 				}
 
 				res, err := latest.Check(githubTag, strings.Replace(VersionCli, "v", "", 1))

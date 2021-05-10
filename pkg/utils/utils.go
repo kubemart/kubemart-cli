@@ -506,20 +506,22 @@ func GetKubeconfig() (clientcmd.ClientConfig, error) {
 
 	val, present := os.LookupEnv("KUBECONFIG")
 	if present {
-		file, err := os.Open(val)
+		paths := strings.Split(val, ":")
+		filepath := paths[0]
+		file, err := os.Open(filepath)
 		if err != nil {
-			fmt.Printf("Unable to open kubeconfig file (%s). Perhaps it's empty?\n", val)
+			fmt.Printf("Unable to open kubeconfig file (%s). Perhaps it's empty?\n", filepath)
 			return cc, err
 		}
 
 		fileinfo, _ := file.Stat()
 		if err != nil {
-			fmt.Printf("Unable to retrieve kubeconfig file (%s) info\n", val)
+			fmt.Printf("Unable to retrieve kubeconfig file (%s) info\n", filepath)
 			return cc, err
 		}
 
 		if fileinfo.Size() == 0 {
-			fmt.Printf("Kubeconfig file (%s) is empty\n", val)
+			fmt.Printf("Kubeconfig file (%s) is empty\n", filepath)
 			return cc, err
 		}
 	}
