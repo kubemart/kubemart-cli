@@ -62,6 +62,8 @@ type AppManifest struct {
 			Value string `yaml:"value"`
 		} `yaml:"configuration"`
 	} `yaml:"plans"`
+	Version  string `yaml:"version"`
+	Category string `yaml:"category"`
 }
 
 // KubemartConfigFile is the structure of ~/.kubemart/config.json file
@@ -453,22 +455,31 @@ func GetPostInstallMarkdown(appName string) (string, error) {
 	return out, nil
 }
 
-// GetAppPlans returns sorted app plans e.g. [5,10,20]
-func GetAppPlans(appName string) ([]int, error) {
-	plans := []int{}
+func GetAppManifest(appName string) (AppManifest, error) {
+	manifest := AppManifest{}
 	bp, err := GetKubemartPaths()
 	if err != nil {
-		return plans, err
+		return manifest, err
 	}
 
 	appManifestPath := fmt.Sprintf("%s/%s/manifest.yaml", bp.AppsDirectoryPath, appName)
 	file, err := ioutil.ReadFile(appManifestPath)
 	if err != nil {
-		return plans, err
+		return manifest, err
 	}
 
-	manifest := AppManifest{}
 	err = yaml.Unmarshal(file, &manifest)
+	if err != nil {
+		return manifest, err
+	}
+
+	return manifest, nil
+}
+
+// GetAppPlans returns sorted app plans e.g. [5,10,20]
+func GetAppPlans(appName string) ([]int, error) {
+	plans := []int{}
+	manifest, err := GetAppManifest(appName)
 	if err != nil {
 		return plans, err
 	}

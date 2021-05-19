@@ -12,6 +12,7 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/stretchr/testify v1.7.0
 	github.com/tcnksm/go-latest v0.0.0-20170313132115-e3007ae9052e
+	github.com/tg/gosortmap v0.0.0-20190425101757-4b9ddc7c3a61 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.20.4
 	k8s.io/apiextensions-apiserver v0.18.6
