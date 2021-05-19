@@ -45,7 +45,12 @@ var destroyCmd = &cobra.Command{
 			return fmt.Errorf("operation cancelled")
 		}
 
-		apps, err := ListApps()
+		cs, err := NewClientFromLocalKubeConfig()
+		if err != nil {
+			return err
+		}
+
+		apps, err := cs.ListApps()
 		if err != nil {
 			return err
 		}
@@ -54,14 +59,14 @@ var destroyCmd = &cobra.Command{
 		for _, app := range apps.Items {
 			appName := app.ObjectMeta.Name
 			fmt.Printf("Deleting %s app...\n", appName)
-			err := DeleteApp(appName)
+			err := cs.DeleteApp(appName)
 			if err != nil {
 				return err
 			}
 
 			fmt.Printf("Waiting %s app to get deleted...\n", appName)
 			for i := 0; i < 120; i++ {
-				_, err := GetApp(appName)
+				_, err := cs.GetApp(appName)
 				if err != nil {
 					fmt.Printf("%s app has been deleted...\n", appName)
 					deletedApps = append(deletedApps, appName)

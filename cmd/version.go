@@ -52,10 +52,13 @@ var (
 
 				isAppCRDInstalled := "not created"
 				isJobWatcherCRDInstalled := "not created"
-				if utils.IsCRDExist("apps.kubemart.civo.com") {
+				appCRDExists, _ := utils.IsCRDExist("apps.kubemart.civo.com")
+				if appCRDExists {
 					isAppCRDInstalled = "created"
 				}
-				if utils.IsCRDExist("jobwatchers.kubemart.civo.com") {
+
+				jwCRDExists, _ := utils.IsCRDExist("jobwatchers.kubemart.civo.com")
+				if jwCRDExists {
 					isJobWatcherCRDInstalled = "created"
 				}
 				fmt.Printf("App CRD status: %s\n", isAppCRDInstalled)

@@ -209,7 +209,12 @@ func TestUpdate(t *testing.T) {
 			break
 		}
 
-		_, err := GetApp(appName)
+		cs, err := NewClientFromLocalKubeConfig()
+		if err != nil {
+			t.Error(err)
+		}
+
+		_, err = cs.GetApp(appName)
 		if err != nil {
 			canInstall = true
 			break
@@ -298,7 +303,12 @@ func TestInstallAppWithPlan(t *testing.T) {
 		t.Errorf("Expecting output to contain %s but got %s", expected, actual)
 	}
 
-	app, _ := GetApp(appName)
+	cs, err := NewClientFromLocalKubeConfig()
+	if err != nil {
+		t.Error(err)
+	}
+
+	app, _ := cs.GetApp(appName)
 	actualPlan := app.Spec.Plan
 	expectedPlan := plan
 	if expectedPlan != actualPlan {

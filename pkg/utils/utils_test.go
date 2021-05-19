@@ -616,7 +616,7 @@ func TestGetMasterIP(t *testing.T) {
 }
 
 func TestIsCRDExist(t *testing.T) {
-	actual := IsCRDExist("apps.kubemart.civo.com")
+	actual, _ := IsCRDExist("apps.kubemart.civo.com")
 	expected := false
 	if expected != actual {
 		t.Errorf("Expected %t but got %t", expected, actual)
@@ -630,7 +630,7 @@ func TestApplyManifests(t *testing.T) {
 	manifests := strings.Split(operatorYAML, "---")
 	_ = ApplyManifests(manifests)
 
-	actual := IsCRDExist("apps.kubemart.civo.com")
+	actual, _ := IsCRDExist("apps.kubemart.civo.com")
 	expected := true
 	if expected != actual {
 		t.Errorf("Expected %t but got %t", expected, actual)
@@ -644,7 +644,7 @@ func TestDeleteManifests(t *testing.T) {
 	manifests := strings.Split(operatorYAML, "---")
 	_ = DeleteManifests(manifests)
 
-	actual := IsCRDExist("apps.kubemart.civo.com")
+	actual, _ := IsCRDExist("apps.kubemart.civo.com")
 	expected := false
 	if expected != actual {
 		t.Errorf("Expected %t but got %t", expected, actual)

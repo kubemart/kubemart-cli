@@ -29,44 +29,58 @@ var installedCmd = &cobra.Command{
 	Example: "kubemart installed",
 	Short:   "List all installed applications",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		apps, err := ListApps()
+		cs, err := NewClientFromLocalKubeConfig()
 		if err != nil {
 			return err
 		}
 
-		haveSomething := false
-		w := tabwriter.NewWriter(os.Stdout, 15, 0, 1, ' ', tabwriter.TabIndent)
-		fmt.Fprintln(w, "NAME\tCURRENT STATUS\tVERSION\tUPDATE AVAILABLE")
-		for _, app := range apps.Items {
-			if !app.DeletionTimestamp.IsZero() {
-				continue // skip deleted apps
-			}
-
-			currentStatus := fmt.Sprintf("\t%s", app.Status.LastStatus)
-			version := fmt.Sprintf("\t%s", app.Status.InstalledVersion)
-
-			updateAvailable := ""
-			if app.Status.InstalledVersion != "" {
-				if app.Status.NewUpdateAvailable {
-					updateAvailable = fmt.Sprintf("yes (%s)", app.Status.NewUpdateVersion)
-				} else {
-					updateAvailable = "no"
-				}
-			}
-			newUpdate := fmt.Sprintf("\t%s", updateAvailable)
-
-			fmt.Fprintln(w, app.Name, currentStatus, version, newUpdate)
-			haveSomething = true
-		}
-
-		if haveSomething {
-			w.Flush()
-		} else {
-			fmt.Println("No resources found")
+		err = cs.RunInstalled()
+		if err != nil {
+			return err
 		}
 
 		return nil
 	},
+}
+
+func (cs *Clientset) RunInstalled() error {
+	apps, err := cs.ListApps()
+	if err != nil {
+		return err
+	}
+
+	haveSomething := false
+	w := tabwriter.NewWriter(os.Stdout, 15, 0, 1, ' ', tabwriter.TabIndent)
+	fmt.Fprintln(w, "NAME\tCURRENT STATUS\tVERSION\tUPDATE AVAILABLE")
+	for _, app := range apps.Items {
+		if !app.DeletionTimestamp.IsZero() {
+			continue // skip deleted apps
+		}
+
+		currentStatus := fmt.Sprintf("\t%s", app.Status.LastStatus)
+		version := fmt.Sprintf("\t%s", app.Status.InstalledVersion)
+
+		updateAvailable := ""
+		if app.Status.InstalledVersion != "" {
+			if app.Status.NewUpdateAvailable {
+				updateAvailable = fmt.Sprintf("yes (%s)", app.Status.NewUpdateVersion)
+			} else {
+				updateAvailable = "no"
+			}
+		}
+		newUpdate := fmt.Sprintf("\t%s", updateAvailable)
+
+		fmt.Fprintln(w, app.Name, currentStatus, version, newUpdate)
+		haveSomething = true
+	}
+
+	if haveSomething {
+		w.Flush()
+	} else {
+		fmt.Println("No resources found")
+	}
+
+	return nil
 }
 
 func init() {

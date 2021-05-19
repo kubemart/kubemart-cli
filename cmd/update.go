@@ -33,16 +33,30 @@ var updateCmd = &cobra.Command{
 		if appName == "" {
 			return fmt.Errorf("please provide an app name")
 		}
-		utils.DebugPrintf("App name to install: %s\n", appName)
+		utils.DebugPrintf("App name to update: %s\n", appName)
 
-		err := UpdateApp(appName)
+		cs, err := NewClientFromLocalKubeConfig()
 		if err != nil {
-			return fmt.Errorf("unable to update app - %v", err)
+			return err
 		}
 
-		fmt.Printf("%s app is now scheduled to be updated\n", appName)
+		err = cs.RunUpdate(&appName)
+		if err != nil {
+			return err
+		}
+
 		return nil
 	},
+}
+
+func (cs *Clientset) RunUpdate(appName *string) error {
+	err := cs.UpdateApp(*appName)
+	if err != nil {
+		return fmt.Errorf("unable to update app - %v", err)
+	}
+
+	fmt.Printf("%s app is now scheduled to be updated\n", *appName)
+	return nil
 }
 
 func init() {

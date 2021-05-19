@@ -75,15 +75,19 @@ func init() {
 	// when this action is called directly.
 	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
-	cobra.OnInitialize(replaceKubeconfigEnvIfFlagIsPresent)
+	// This `setLogLevelEnvIfFlagIsTrue` must be the first. Otherwise,
+	// we won't see debug statement in other `OnInitialize` functions.
 	cobra.OnInitialize(setLogLevelEnvIfFlagIsTrue)
+	cobra.OnInitialize(replaceKubeconfigEnvIfFlagIsPresent)
 }
 
 // replaceKubeconfigEnvIfFlagIsPresent will set KUBECONFIG env variable
 // when user use '--kubeconfig' or '-k' flag
 func replaceKubeconfigEnvIfFlagIsPresent() {
 	if kubeCfgFile != "" {
-		os.Setenv("KUBECONFIG", kubeCfgFile)
+		kubeconfigEnvName := "KUBECONFIG"
+		os.Setenv(kubeconfigEnvName, kubeCfgFile)
+		utils.DebugPrintf("KUBECONFIG: %s\n", os.Getenv(kubeconfigEnvName))
 	}
 }
 

@@ -35,18 +35,32 @@ var uninstallCmd = &cobra.Command{
 		}
 		utils.DebugPrintf("App name to uninstall: %s\n", appName)
 
-		err := DeleteApp(appName)
+		cs, err := NewClientFromLocalKubeConfig()
 		if err != nil {
 			return err
 		}
 
+		err = cs.RunUninstall(&appName)
 		if err != nil {
-			return fmt.Errorf("unable to delete %s app - %v", appName, err)
+			return err
 		}
 
-		fmt.Printf("%s app is now scheduled to be deleted\n", appName)
 		return nil
 	},
+}
+
+func (cs *Clientset) RunUninstall(appName *string) error {
+	err := cs.DeleteApp(*appName)
+	if err != nil {
+		return err
+	}
+
+	if err != nil {
+		return fmt.Errorf("unable to delete %s app - %v", *appName, err)
+	}
+
+	fmt.Printf("%s app is now scheduled to be deleted\n", *appName)
+	return nil
 }
 
 func init() {
