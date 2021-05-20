@@ -10,7 +10,6 @@ package cmd
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -286,13 +285,12 @@ func TestVersionVerbose(t *testing.T) {
 func TestInstallAppWithPlan(t *testing.T) {
 	appName := "mariadb"
 	plan := 10
+	appWithPlan := fmt.Sprintf("%v:%v", appName, plan)
 
 	actual, _ := test.RecordStdOutStdErr(func() {
 		rootCmd.SetArgs([]string{
 			"install",
-			appName,
-			"--plan",
-			strconv.Itoa(plan),
+			appWithPlan,
 			"--quiet",
 		})
 		rootCmd.Execute()
