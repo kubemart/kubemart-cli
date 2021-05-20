@@ -128,12 +128,12 @@ func TestInstall(t *testing.T) {
 		rootCmd.Execute()
 	})
 
-	expected1 := "App created successfully"
+	expected1 := "App rabbitmq created successfully"
 	if !strings.Contains(actual, expected1) {
 		t.Errorf("Expecting output to contain %s but got %s", expected1, actual)
 	}
 
-	expected2 := "App post-install notes:"
+	expected2 := "App rabbitmq post-install notes:"
 	if !strings.Contains(actual, expected2) {
 		t.Errorf("Expecting output to contain %s but got %s", expected2, actual)
 	}
@@ -298,7 +298,7 @@ func TestInstallAppWithPlan(t *testing.T) {
 		rootCmd.Execute()
 	})
 
-	expected := "App created successfully"
+	expected := "App mariadb created successfully"
 	if !strings.Contains(actual, expected) {
 		t.Errorf("Expecting output to contain %s but got %s", expected, actual)
 	}
