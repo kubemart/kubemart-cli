@@ -17,28 +17,25 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/forestgiant/sliceutil"
 	utils "github.com/kubemart/kubemart-cli/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
-// Plan is used for selected apps i.e. mariadb
-var Plan int
-
 // When this is true, do not print post-install message
 var HidePostInstall bool
 
 // installCmd represents the install command
 var installCmd = &cobra.Command{
-	Use:     "install APP_NAME",
-	Example: "kubemart install rabbitmq",
-	Short:   "Install an application",
+	Use:     "install APP_NAME[:PLAN]",
+	Example: "kubemart install rabbitmq\nkubemart install wordpress:10GB,jenkins:10GB",
+	Short:   "Install application(s)",
 	Args:    cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		appName := args[0]
-
-		err := PreRunInstall(&appName, &Plan)
+		appsAndPlans, err := PreRunInstall(args)
 		if err != nil {
 			return err
 		}
@@ -48,7 +45,7 @@ var installCmd = &cobra.Command{
 			return err
 		}
 
-		err = cs.RunInstall(&appName, &Plan)
+		err = cs.RunInstall(appsAndPlans)
 		if err != nil {
 			return err
 		}
@@ -57,56 +54,93 @@ var installCmd = &cobra.Command{
 	},
 }
 
-func PreRunInstall(appName *string, plan *int) error {
-	if *appName == "" {
-		return fmt.Errorf("please provide an app name")
-	}
-	utils.DebugPrintf("App name to install: %s\n", *appName)
+func PreRunInstall(args []string) (map[string]string, error) {
+	appsAndPlans := make(map[string]string)
 
-	appExists := utils.IsAppExist(*appName)
-	if !appExists {
-		return fmt.Errorf("unable to find %s app", *appName)
+	appsCombined := args[0]
+	apps := strings.Split(appsCombined, ",")
+	for _, app := range apps {
+		splitted := strings.Split(app, ":")
+		appName := splitted[0]
+		appPlan := ""
+
+		if len(splitted) > 1 {
+			appPlan = splitted[1]
+		}
+
+		appsAndPlans[appName] = appPlan
 	}
 
-	appPlans, err := utils.GetAppPlans(*appName)
-	if err != nil {
-		return fmt.Errorf("unable to list app's plans - %v", err)
-	}
+	for name, plan := range appsAndPlans {
+		appExists := utils.IsAppExist(name)
+		if !appExists {
+			return appsAndPlans, fmt.Errorf("unable to find %s app", name)
+		}
 
-	if len(appPlans) > 0 {
-		if *plan == 0 {
-			smallestPlan := utils.GetSmallestAppPlan(appPlans)
-			if smallestPlan > 0 {
-				*plan = smallestPlan
-				fmt.Println("This app require a plan. Next time you could use --plan or -p flag.")
-				fmt.Printf("Since the flag is not present, this installation will proceed with the smallest one (%dGB)\n", *plan)
+		appPlans, err := utils.GetAppPlans(name)
+		if err != nil {
+			return appsAndPlans, fmt.Errorf("unable to list app's plans - %v", err)
+		}
+
+		// TODO - revise this
+		if plan == "" {
+			plan = "0"
+		}
+
+		// TODO - revise this
+		appPlan, err := strconv.Atoi(plan)
+		if err != nil {
+			return appsAndPlans, fmt.Errorf("unable to convert %s app plan to int - %v", name, err)
+		}
+
+		if len(appPlans) > 0 {
+			if appPlan == 0 {
+				smallestPlan := utils.GetSmallestAppPlan(appPlans)
+				if smallestPlan > 0 {
+					appPlan = smallestPlan
+					fmt.Printf("This %s app require a plan. Next time you could use 'APP_NAME[:PLAN]'.\n", name)
+					fmt.Printf("Since the plan is not present, this %s installation will proceed with the smallest one (%dGB).\n", name, appPlan)
+				}
+			}
+
+			if appPlan > 0 {
+				if !sliceutil.Contains(appPlans, appPlan) {
+					return appsAndPlans, fmt.Errorf("the given plan is not supported for this app - supported values are %v", appPlans)
+				}
 			}
 		}
 
-		if *plan > 0 {
-			if !sliceutil.Contains(appPlans, *plan) {
-				return fmt.Errorf("the given plan is not supported for this app - supported values are %v", appPlans)
-			}
-		}
-
-		utils.DebugPrintf("Plan to proceed with: %d\n", *plan)
+		utils.DebugPrintf("Plan to proceed with for %s app: %d\n", name, appPlan)
 	}
 
-	return nil
+	return appsAndPlans, nil
 }
 
-func (cs *Clientset) RunInstall(appName *string, plan *int) error {
-	created, err := cs.CreateApp(*appName, *plan)
-	if !created {
-		return fmt.Errorf("app creation failed - %+v", err.Error())
-	}
+func (cs *Clientset) RunInstall(appsAndPlans map[string]string) error {
+	for name, plan := range appsAndPlans {
+		// TODO - revise this
+		if plan == "" {
+			plan = "0"
+		}
 
-	fmt.Println("App created successfully")
-	if !HidePostInstall {
-		postInstallMsg, err := utils.GetPostInstallMarkdown(*appName)
-		if err == nil {
-			fmt.Println("App post-install notes:")
-			fmt.Println(postInstallMsg)
+		// TODO - revise this
+		appPlan, err := strconv.Atoi(plan)
+		if err != nil {
+			return fmt.Errorf("unable to convert %s app plan to int - %v", name, err)
+		}
+
+		created, err := cs.CreateApp(name, appPlan)
+		if !created {
+			return fmt.Errorf("%s app creation failed - %+v", name, err.Error())
+		}
+
+		fmt.Printf("App %s created successfully\n", name)
+		if !HidePostInstall {
+			postInstallMsg, err := utils.GetPostInstallMarkdown(name)
+			if err == nil {
+				fmt.Printf("App %s post-install notes:\n", name)
+				fmt.Println(postInstallMsg)
+			}
 		}
 	}
 
@@ -115,7 +149,6 @@ func (cs *Clientset) RunInstall(appName *string, plan *int) error {
 
 func init() {
 	rootCmd.AddCommand(installCmd)
-	installCmd.Flags().IntVarP(&Plan, "plan", "p", 0, "storage plan for the app (in GB) e.g. '5' for 5GB")
 	installCmd.Flags().BoolVarP(&HidePostInstall, "quiet", "q", false, "do not show post-install message")
 
 	// Here you will define your flags and configuration settings.

@@ -17,30 +17,24 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
-	utils "github.com/kubemart/kubemart-cli/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
 // uninstallCmd represents the uninstall command
 var uninstallCmd = &cobra.Command{
 	Use:     "uninstall APP_NAME",
-	Example: "kubemart uninstall rabbitmq",
-	Short:   "Uninstall an application",
+	Example: "kubemart uninstall rabbitmq\nkubemart uninstall wordpress,jenkins",
+	Short:   "Uninstall application(s)",
 	Args:    cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		appName := args[0]
-		if appName == "" {
-			return fmt.Errorf("please provide an app name")
-		}
-		utils.DebugPrintf("App name to uninstall: %s\n", appName)
-
 		cs, err := NewClientFromLocalKubeConfig()
 		if err != nil {
 			return err
 		}
 
-		err = cs.RunUninstall(&appName)
+		err = cs.RunUninstall(args)
 		if err != nil {
 			return err
 		}
@@ -49,17 +43,22 @@ var uninstallCmd = &cobra.Command{
 	},
 }
 
-func (cs *Clientset) RunUninstall(appName *string) error {
-	err := cs.DeleteApp(*appName)
-	if err != nil {
-		return err
+func (cs *Clientset) RunUninstall(args []string) error {
+	apps := strings.Split(args[0], ",")
+
+	for _, app := range apps {
+		err := cs.DeleteApp(app)
+		if err != nil {
+			return err
+		}
+
+		if err != nil {
+			return fmt.Errorf("unable to delete %s app - %v", app, err)
+		}
+
+		fmt.Printf("%s app is now scheduled to be deleted\n", app)
 	}
 
-	if err != nil {
-		return fmt.Errorf("unable to delete %s app - %v", *appName, err)
-	}
-
-	fmt.Printf("%s app is now scheduled to be deleted\n", *appName)
 	return nil
 }
 
