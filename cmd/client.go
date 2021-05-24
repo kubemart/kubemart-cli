@@ -67,7 +67,7 @@ func NewClientFromKubeConfigString(kubeconfig string) (*Clientset, error) {
 }
 
 // CreateApp will create an App in user's cluster
-func (cs *Clientset) CreateApp(appName string, plan int) (bool, error) {
+func (cs *Clientset) CreateApp(appName string, plan string) (bool, error) {
 	app := &operator.App{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "kubemart.civo.com/v1alpha1",

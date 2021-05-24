@@ -15,7 +15,6 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -476,38 +475,68 @@ func GetAppManifest(appName string) (AppManifest, error) {
 	return manifest, nil
 }
 
-// GetAppPlans returns sorted app plans e.g. [5,10,20]
-func GetAppPlans(appName string) ([]int, error) {
-	plans := []int{}
+// GetAppPlans returns app plan labels e.g. ["5GB", "10GB", "20GB"]
+func GetAppPlans(appName string) ([]string, error) {
+	plans := []string{}
 	manifest, err := GetAppManifest(appName)
 	if err != nil {
 		return plans, err
 	}
 
 	for _, plan := range manifest.Plans {
-		conf := plan.Configuration
-		keys := reflect.ValueOf(conf).MapKeys()
-		strKeys := make([]string, len(keys))
-		for i := 0; i < len(keys); i++ {
-			strKeys[i] = keys[i].String()
-		}
-
-		for _, key := range strKeys {
-			p := ExtractPlanIntFromPlanStr(conf[key].Value)
-			if p > 0 {
-				plans = append(plans, p)
-			}
-		}
+		label := plan.Label
+		plans = append(plans, label)
 	}
 
-	sort.Ints(plans)
 	return plans, nil
 }
 
-// GetSmallestAppPlan take sorted plans slice e.g. [5,10,20] and return
-// the smallest one e.g. 5 (int)
-func GetSmallestAppPlan(sortedPlans []int) int {
-	return sortedPlans[0]
+// GetSmallestAppPlan take plan labels slice e.g. ["5GB", "10GB", "20GB"]
+// and return the first one e.g. 5GB (string)
+func GetSmallestAppPlan(plans []string) string {
+	return plans[0]
+}
+
+func GetAppPlanVariableName(appName string) (string, error) {
+	manifest, err := GetAppManifest(appName)
+	if err != nil {
+		return "", err
+	}
+
+	planVariableNames := []string{}
+	for _, plan := range manifest.Plans {
+		conf := plan.Configuration
+		keys := reflect.ValueOf(conf).MapKeys()
+		for i := 0; i < len(keys); i++ {
+			planVariableNames = append(planVariableNames, keys[i].String())
+		}
+	}
+
+	return planVariableNames[0], nil
+}
+
+// GetAppPlanValueByLabel will return the value of the plan. For example,
+// if the planLabel is "5GB" and the app is "wordpress", this will return "5Gi".
+func GetAppPlanValueByLabel(appName, planLabel string) (string, error) {
+	planValue := ""
+
+	manifest, err := GetAppManifest(appName)
+	if err != nil {
+		return planValue, err
+	}
+
+	for _, plan := range manifest.Plans {
+		if plan.Label == planLabel {
+			confKey, err := GetAppPlanVariableName(appName)
+			if err != nil {
+				return planValue, err
+			}
+
+			planValue = plan.Configuration[confKey].Value
+		}
+	}
+
+	return planValue, nil
 }
 
 // GetKubeconfig will load kubeconfig from KUBECONFIG environment variable.

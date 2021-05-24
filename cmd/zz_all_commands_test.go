@@ -284,7 +284,7 @@ func TestVersionVerbose(t *testing.T) {
 
 func TestInstallAppWithPlan(t *testing.T) {
 	appName := "mariadb"
-	plan := 10
+	plan := "10GB"
 	appWithPlan := fmt.Sprintf("%v:%v", appName, plan)
 
 	actual, _ := test.RecordStdOutStdErr(func() {
@@ -308,8 +308,8 @@ func TestInstallAppWithPlan(t *testing.T) {
 
 	app, _ := cs.GetApp(appName)
 	actualPlan := app.Spec.Plan
-	expectedPlan := plan
+	expectedPlan := "10Gi"
 	if expectedPlan != actualPlan {
-		t.Errorf("Expecting %d Gi plan but got %d Gi", expectedPlan, actualPlan)
+		t.Errorf("Expecting %s plan but got %s", expectedPlan, actualPlan)
 	}
 }
