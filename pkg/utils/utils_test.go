@@ -385,19 +385,56 @@ func TestGetPostInstallMarkdown(t *testing.T) {
 }
 
 // Note: this test must be after "git clone" test (see above)
-func TestGetAppPlans(t *testing.T) {
+func TestGetAppPlans1(t *testing.T) {
 	actual, _ := GetAppPlans("mariadb")
-	expected := []int{5, 10, 20}
+	expected := []string{"5GB", "10GB", "20GB"}
 	if !elementsMatch(expected, actual) {
 		t.Errorf("Expected %v but actual is %v", expected, actual)
 	}
 }
 
+func TestGetAppPlans2(t *testing.T) {
+	plans, _ := GetAppPlans("linkerd")
+
+	expected0 := "Linkerd Minimal"
+	if plans[0] != expected0 {
+		t.Errorf("Expected %v but actual is %v", expected0, plans[0])
+	}
+
+	expected1 := "Linkerd & Jaeger"
+	if plans[1] != expected1 {
+		t.Errorf("Expected %v but actual is %v", expected1, plans[1])
+	}
+
+	expected2 := "Linkerd with Dashboard"
+	if plans[2] != expected2 {
+		t.Errorf("Expected %v but actual is %v", expected2, plans[2])
+	}
+
+	expected3 := "Linkerd with Dashboard & Jaeger"
+	if plans[3] != expected3 {
+		t.Errorf("Expected %v but actual is %v", expected3, plans[3])
+	}
+}
+
 // Note: this test must be after "git clone" test (see above)
-func TestGetSmallestAppPlan(t *testing.T) {
-	sortedPlans := []int{5, 10, 20}
-	expected := 5
-	result := GetSmallestAppPlan(sortedPlans)
+func TestGetSmallestAppPlan1(t *testing.T) {
+	plans := []string{"5GB", "10GB", "20GB"}
+	expected := "5GB"
+	result := GetSmallestAppPlan(plans)
+
+	if expected != result {
+		t.Errorf("Expecting %+v but got %+v\n", expected, result)
+	}
+
+	fmt.Println("Smallest plan:", result)
+}
+
+// Note: this test must be after "git clone" test (see above)
+func TestGetSmallestAppPlan2(t *testing.T) {
+	plans := []string{"Linkerd Minimal", "Linkerd & Jaeger", "Linkerd with Dashboard", "Linkerd with Dashboard & Jaeger"}
+	expected := "Linkerd Minimal"
+	result := GetSmallestAppPlan(plans)
 
 	if expected != result {
 		t.Errorf("Expecting %+v but got %+v\n", expected, result)
@@ -616,7 +653,7 @@ func TestGetMasterIP(t *testing.T) {
 }
 
 func TestIsCRDExist(t *testing.T) {
-	actual := IsCRDExist("apps.kubemart.civo.com")
+	actual, _ := IsCRDExist("apps.kubemart.civo.com")
 	expected := false
 	if expected != actual {
 		t.Errorf("Expected %t but got %t", expected, actual)
@@ -630,7 +667,7 @@ func TestApplyManifests(t *testing.T) {
 	manifests := strings.Split(operatorYAML, "---")
 	_ = ApplyManifests(manifests)
 
-	actual := IsCRDExist("apps.kubemart.civo.com")
+	actual, _ := IsCRDExist("apps.kubemart.civo.com")
 	expected := true
 	if expected != actual {
 		t.Errorf("Expected %t but got %t", expected, actual)
@@ -644,7 +681,7 @@ func TestDeleteManifests(t *testing.T) {
 	manifests := strings.Split(operatorYAML, "---")
 	_ = DeleteManifests(manifests)
 
-	actual := IsCRDExist("apps.kubemart.civo.com")
+	actual, _ := IsCRDExist("apps.kubemart.civo.com")
 	expected := false
 	if expected != actual {
 		t.Errorf("Expected %t but got %t", expected, actual)
@@ -775,6 +812,40 @@ func TestGetLatestManifests(t *testing.T) {
 	manifests, _ := GetLatestManifests()
 	if !strings.Contains(manifests, "kubemart") {
 		t.Errorf("Manifests does not contain 'kubemart' word")
+	}
+}
+
+func TestGetAppPlanVariableName1(t *testing.T) {
+	actual, _ := GetAppPlanVariableName("mariadb")
+	expected := "VOLUME_SIZE"
+	if expected != actual {
+		t.Errorf("Expected %s but got %s", expected, actual)
+	}
+}
+
+func TestGetAppPlanVariableName2(t *testing.T) {
+	actual, _ := GetAppPlanVariableName("minio")
+	expected := "PV_SIZE_GB"
+	if expected != actual {
+		t.Errorf("Expected %s but got %s", expected, actual)
+	}
+}
+
+func TestGetAppPlanValueByLabel1(t *testing.T) {
+	actual, _ := GetAppPlanValueByLabel("mariadb", "5GB")
+	expected := "5Gi"
+
+	if expected != actual {
+		t.Errorf("Expected %s but got %s", expected, actual)
+	}
+}
+
+func TestGetAppPlanValueByLabel2(t *testing.T) {
+	actual, _ := GetAppPlanValueByLabel("linkerd", "Linkerd with Dashboard")
+	expected := "linkerdviz"
+
+	if expected != actual {
+		t.Errorf("Expected %s but got %s", expected, actual)
 	}
 }
 

@@ -17,82 +17,117 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/forestgiant/sliceutil"
 	utils "github.com/kubemart/kubemart-cli/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
-// Plan is used for selected apps i.e. mariadb
-var Plan int
-
-// When this is true, do not print post-install message
-var hidePostInstall bool
-
 // installCmd represents the install command
 var installCmd = &cobra.Command{
-	Use:     "install APP_NAME",
-	Example: "kubemart install rabbitmq",
-	Short:   "Install an application",
+	Use:     "install APP_NAME[:PLAN]",
+	Example: "kubemart install rabbitmq\nkubemart install wordpress:10GB,jenkins:10GB",
+	Short:   "Install application(s)",
 	Args:    cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		appName := args[0]
-		if appName == "" {
-			return fmt.Errorf("please provide an app name")
-		}
-		utils.DebugPrintf("App name to install: %s\n", appName)
-
-		appExists := utils.IsAppExist(appName)
-		if !appExists {
-			return fmt.Errorf("unable to find %s app", appName)
-		}
-
-		appPlans, err := utils.GetAppPlans(appName)
+		processedAppsAndPlanLabels, err := PreRunInstall(cmd, args)
 		if err != nil {
-			return fmt.Errorf("unable to list app's plans - %v", err)
+			return err
 		}
 
-		if len(appPlans) > 0 {
-			if Plan == 0 {
-				smallestPlan := utils.GetSmallestAppPlan(appPlans)
-				if smallestPlan > 0 {
-					Plan = smallestPlan
-					fmt.Println("This app require a plan. Next time you could use --plan or -p flag.")
-					fmt.Printf("Since the flag is not present, this installation will proceed with the smallest one (%dGB)\n", Plan)
-				}
-			}
-
-			if Plan > 0 {
-				if !sliceutil.Contains(appPlans, Plan) {
-					return fmt.Errorf("the given plan is not supported for this app - supported values are %v", appPlans)
-				}
-			}
-
-			utils.DebugPrintf("Plan to proceed with: %d\n", Plan)
+		cs, err := NewClientFromLocalKubeConfig()
+		if err != nil {
+			return err
 		}
 
-		created, err := CreateApp(appName, Plan)
-		if !created {
-			return fmt.Errorf("app creation failed - %+v", err.Error())
-		}
-
-		fmt.Println("App created successfully")
-		if !hidePostInstall {
-			postInstallMsg, err := utils.GetPostInstallMarkdown(appName)
-			if err == nil {
-				fmt.Println("App post-install notes:")
-				fmt.Println(postInstallMsg)
-			}
+		err = cs.RunInstall(processedAppsAndPlanLabels)
+		if err != nil {
+			return err
 		}
 
 		return nil
 	},
 }
 
+func PreRunInstall(cmd *cobra.Command, args []string) (map[string]string, error) {
+	appsAndPlanLabels := make(map[string]string)
+
+	appsCombined := args[0]
+	apps := strings.Split(appsCombined, ",")
+	for _, app := range apps {
+		splitted := strings.Split(app, ":")
+		appName := splitted[0]
+		appPlanLabel := ""
+
+		if len(splitted) > 1 {
+			appPlanLabel = splitted[1]
+		}
+
+		appsAndPlanLabels[appName] = appPlanLabel
+	}
+
+	processedAppsAndPlanLabels := make(map[string]string)
+	for appName, planLabel := range appsAndPlanLabels {
+		appExists := utils.IsAppExist(appName)
+		if !appExists {
+			return appsAndPlanLabels, fmt.Errorf("unable to find %s app", appName)
+		}
+
+		appPlanLabels, err := utils.GetAppPlans(appName)
+		if err != nil {
+			return appsAndPlanLabels, fmt.Errorf("unable to list app's plans - %v", err)
+		}
+
+		if len(appPlanLabels) > 0 {
+			firstPlan := utils.GetSmallestAppPlan(appPlanLabels)
+			if planLabel == "" {
+				planLabel = firstPlan
+				fmt.Printf("This %s app require a plan. Next time you could use '%s APP_NAME[:PLAN]' format.\n", appName, cmd.CommandPath())
+				fmt.Printf("Since the plan is not present, this %s installation will proceed with the smallest one (%s).\n", appName, planLabel)
+			}
+
+			if !sliceutil.Contains(appPlanLabels, planLabel) {
+				return appsAndPlanLabels, fmt.Errorf("the given plan is not supported for %s app - supported values are %v", appName, appPlanLabels)
+			}
+		}
+
+		processedAppsAndPlanLabels[appName] = planLabel
+		utils.DebugPrintf("Plan to proceed with for %s app: %s\n", appName, planLabel)
+	}
+
+	return processedAppsAndPlanLabels, nil
+}
+
+func (cs *Clientset) RunInstall(processedAppsAndPlanLabels map[string]string) error {
+	createdApps := []string{}
+
+	for appName, appPlan := range processedAppsAndPlanLabels {
+		if appPlan != "" {
+			plan, err := utils.GetAppPlanValueByLabel(appName, appPlan)
+			if err != nil {
+				return err
+			}
+			appPlan = plan
+		}
+
+		created, err := cs.CreateApp(appName, appPlan)
+		if !created {
+			return fmt.Errorf("%s app creation failed - %+v", appName, err.Error())
+		} else {
+			createdApps = append(createdApps, appName)
+		}
+	}
+
+	if len(createdApps) > 0 {
+		fmt.Printf("App(s) created successfully: %s\n", strings.Join(createdApps, ", "))
+	}
+
+	return nil
+}
+
 func init() {
 	rootCmd.AddCommand(installCmd)
-	installCmd.Flags().IntVarP(&Plan, "plan", "p", 0, "storage plan for the app (in GB) e.g. '5' for 5GB")
-	installCmd.Flags().BoolVarP(&hidePostInstall, "quiet", "q", false, "do not show post-install message")
 
 	// Here you will define your flags and configuration settings.
 

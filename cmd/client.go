@@ -10,33 +10,64 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
 	baseURL = "/apis/kubemart.civo.com/v1alpha1/namespaces/kubemart-system/apps"
 )
 
-// GetKubeClientSetIfCRDIsInstalled returns Kubernetes client if the
-// App CRD exists in the user's cluster
-func GetKubeClientSetIfCRDIsInstalled() (*kubernetes.Clientset, error) {
-	clientset := &kubernetes.Clientset{}
-	crdExist := utils.IsCRDExist("apps.kubemart.civo.com")
+// Clientset is used as receiver object in few functions below
+type Clientset struct {
+	*kubernetes.Clientset
+}
+
+func checkIfCrdExists() error {
+	crdExist, err := utils.IsCRDExist("apps.kubemart.civo.com")
+	if err != nil {
+		return err
+	}
+
 	if !crdExist {
 		errMsg := "App CRD is not found in the cluster\n"
 		errMsg += "You can install it by running 'kubemart init' command"
-		return clientset, fmt.Errorf(errMsg)
+		return fmt.Errorf(errMsg)
 	}
+	return nil
+}
 
-	clientset, err := utils.GetKubeClientSet()
+func NewClientFromLocalKubeConfig() (*Clientset, error) {
+	err := checkIfCrdExists()
 	if err != nil {
-		return clientset, fmt.Errorf("unable to create k8s clientset - %v", err)
+		return &Clientset{}, err
 	}
 
-	return clientset, nil
+	cs, err := utils.GetKubeClientSet()
+	if err != nil {
+		return &Clientset{}, fmt.Errorf("unable to create k8s clientset - %v", err)
+	}
+
+	return &Clientset{cs}, nil
+}
+
+// NewClientFromKubeConfigString is called by Civo CLI
+func NewClientFromKubeConfigString(kubeconfig string) (*Clientset, error) {
+	kcBytes := []byte(kubeconfig)
+	rc, err := clientcmd.RESTConfigFromKubeConfig(kcBytes)
+	if err != nil {
+		return &Clientset{}, err
+	}
+
+	cs, err := kubernetes.NewForConfig(rc)
+	if err != nil {
+		return &Clientset{}, err
+	}
+
+	return &Clientset{cs}, nil
 }
 
 // CreateApp will create an App in user's cluster
-func CreateApp(appName string, plan int) (bool, error) {
+func (cs *Clientset) CreateApp(appName string, plan string) (bool, error) {
 	app := &operator.App{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "kubemart.civo.com/v1alpha1",
@@ -53,18 +84,13 @@ func CreateApp(appName string, plan int) (bool, error) {
 		},
 	}
 
-	clientset, err := GetKubeClientSetIfCRDIsInstalled()
-	if err != nil {
-		return false, err
-	}
-
 	body, err := json.Marshal(app)
 	if err != nil {
 		return false, fmt.Errorf("unable to marshall app's manifest - %v", err)
 	}
 
 	created := false
-	err = clientset.RESTClient().
+	err = cs.RESTClient().
 		Post().
 		AbsPath(baseURL).
 		Body(body).
@@ -76,16 +102,11 @@ func CreateApp(appName string, plan int) (bool, error) {
 }
 
 // GetApp will get an App from user's cluster
-func GetApp(appName string) (*operator.App, error) {
+func (cs *Clientset) GetApp(appName string) (*operator.App, error) {
 	app := &operator.App{}
 
-	clientset, err := GetKubeClientSetIfCRDIsInstalled()
-	if err != nil {
-		return app, err
-	}
-
 	path := fmt.Sprintf("%s/%s", baseURL, appName)
-	err = clientset.RESTClient().
+	err := cs.RESTClient().
 		Get().
 		AbsPath(path).
 		Do(context.Background()).
@@ -99,15 +120,10 @@ func GetApp(appName string) (*operator.App, error) {
 }
 
 // ListApps will get all Apps from user's cluster
-func ListApps() (*operator.AppList, error) {
+func (cs *Clientset) ListApps() (*operator.AppList, error) {
 	apps := &operator.AppList{}
 
-	clientset, err := GetKubeClientSetIfCRDIsInstalled()
-	if err != nil {
-		return apps, err
-	}
-
-	res := clientset.RESTClient().
+	res := cs.RESTClient().
 		Get().
 		AbsPath(baseURL).
 		Do(context.Background())
@@ -116,7 +132,7 @@ func ListApps() (*operator.AppList, error) {
 		return apps, fmt.Errorf("unable to list apps - %v", res.Error())
 	}
 
-	err = res.Into(apps)
+	err := res.Into(apps)
 	if err != nil {
 		return apps, fmt.Errorf("unable to parse apps - %v", err)
 	}
@@ -125,13 +141,8 @@ func ListApps() (*operator.AppList, error) {
 }
 
 // UpdateApp will update an App in user's cluster
-func UpdateApp(appName string) error {
-	clientset, err := GetKubeClientSetIfCRDIsInstalled()
-	if err != nil {
-		return err
-	}
-
-	app, err := GetApp(appName)
+func (cs *Clientset) UpdateApp(appName string) error {
+	app, err := cs.GetApp(appName)
 	if err != nil {
 		return err
 	}
@@ -151,7 +162,7 @@ func UpdateApp(appName string) error {
 	}
 
 	path := fmt.Sprintf("%s/%s", baseURL, appName)
-	err = clientset.RESTClient().
+	err = cs.RESTClient().
 		Patch(types.MergePatchType).
 		AbsPath(path).
 		Body(body).
@@ -162,14 +173,9 @@ func UpdateApp(appName string) error {
 }
 
 // DeleteApp will delete an App from user's cluster
-func DeleteApp(appName string) error {
-	clientset, err := GetKubeClientSetIfCRDIsInstalled()
-	if err != nil {
-		return err
-	}
-
+func (cs *Clientset) DeleteApp(appName string) error {
 	path := fmt.Sprintf("%s/%s", baseURL, appName)
-	err = clientset.RESTClient().
+	err := cs.RESTClient().
 		Delete().
 		AbsPath(path).
 		Do(context.Background()).

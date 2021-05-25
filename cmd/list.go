@@ -23,6 +23,7 @@ import (
 
 	"github.com/kubemart/kubemart-cli/pkg/utils"
 	"github.com/spf13/cobra"
+	sortmap "github.com/tg/gosortmap"
 )
 
 // to store all folder names that we don't want e.g. "bin"
@@ -35,30 +36,50 @@ var listCmd = &cobra.Command{
 	Short:   "List all the applications that can be installed",
 	Long:    `This command will display the list of all the applications that can be installed onto the Kubernetes cluster`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		excludeList = make(map[string]bool)
-		excludeList["bin"] = true
-		dir, _ := utils.GetKubemartPaths()
-		path := dir.AppsDirectoryPath
-		files, err := ioutil.ReadDir(path)
+		manifests, err := GetAppManifestsMap()
 		if err != nil {
-			return fmt.Errorf("unable parse get list of files - %v", err)
-		}
-		apps := []string{}
-		for _, file := range files {
-			fileName := file.Name()
-			filePath := fmt.Sprintf("%s/%s", path, fileName)
-			fileInfo, err := os.Stat(filePath)
-			if err != nil {
-				return fmt.Errorf("unable to locate file - %v", err)
-			}
-			if fileInfo.IsDir() && isValid(fileName) {
-				apps = append(apps, fileName)
-			}
+			return err
 		}
 
-		fmt.Println(strings.Join(apps, "\n"))
+		appNames := []string{}
+		for _, m := range sortmap.ByKey(manifests) {
+			appName := fmt.Sprintf("%v", m.Key)
+			appNames = append(appNames, appName)
+		}
+
+		fmt.Println(strings.Join(appNames, "\n"))
 		return nil
 	},
+}
+
+func GetAppManifestsMap() (map[string]utils.AppManifest, error) {
+	manifests := make(map[string]utils.AppManifest)
+	excludeList = make(map[string]bool)
+	excludeList["bin"] = true
+
+	dir, _ := utils.GetKubemartPaths()
+	path := dir.AppsDirectoryPath
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return manifests, fmt.Errorf("unable to get list of files - %v", err)
+	}
+
+	for _, file := range files {
+		fileName := file.Name()
+		filePath := fmt.Sprintf("%s/%s", path, fileName)
+		fileInfo, err := os.Stat(filePath)
+		if err != nil {
+			return manifests, fmt.Errorf("unable to locate file - %v", err)
+		}
+		if fileInfo.IsDir() && isValid(fileName) {
+			manifest, err := utils.GetAppManifest(fileName)
+			if err == nil {
+				manifests[fileName] = manifest
+			}
+		}
+	}
+
+	return manifests, nil
 }
 
 // isValid returns true if the folder is not a hidden folder

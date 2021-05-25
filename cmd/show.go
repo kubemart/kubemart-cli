@@ -1,5 +1,5 @@
 /*
-Copyright © 2020 NAME HERE <EMAIL ADDRESS>
+Copyright © 2021 NAME HERE <EMAIL ADDRESS>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,29 +18,23 @@ package cmd
 import (
 	"fmt"
 
-	utils "github.com/kubemart/kubemart-cli/pkg/utils"
+	"github.com/kubemart/kubemart-cli/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
-// updateCmd represents the update command
-var updateCmd = &cobra.Command{
-	Use:     "update APP_NAME",
-	Example: "kubemart update rabbitmq",
-	Short:   "Update an application",
+// showCmd represents the show command
+var showCmd = &cobra.Command{
+	Use:     "show",
+	Example: "kubemart show APP_NAME",
+	Short:   "Show the application's post-install message",
 	Args:    cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		appName := args[0]
-		if appName == "" {
-			return fmt.Errorf("please provide an app name")
-		}
-		utils.DebugPrintf("App name to update: %s\n", appName)
-
 		cs, err := NewClientFromLocalKubeConfig()
 		if err != nil {
 			return err
 		}
 
-		err = cs.RunUpdate(&appName)
+		err = cs.RunShow(args)
 		if err != nil {
 			return err
 		}
@@ -49,26 +43,37 @@ var updateCmd = &cobra.Command{
 	},
 }
 
-func (cs *Clientset) RunUpdate(appName *string) error {
-	err := cs.UpdateApp(*appName)
-	if err != nil {
-		return fmt.Errorf("unable to update app - %v", err)
+func (cs *Clientset) RunShow(args []string) error {
+	appName := args[0]
+	if appName == "" {
+		return fmt.Errorf("app name is empty")
 	}
 
-	fmt.Printf("%s app is now scheduled to be updated\n", *appName)
+	// check if app exists in cluster
+	_, err := cs.GetApp(appName)
+	if err != nil {
+		return fmt.Errorf("%s app is not installed in this cluster", appName)
+	}
+
+	appPostInstall, err := utils.GetPostInstallMarkdown(appName)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(appPostInstall)
 	return nil
 }
 
 func init() {
-	rootCmd.AddCommand(updateCmd)
+	rootCmd.AddCommand(showCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// updateCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// showCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// updateCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// showCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

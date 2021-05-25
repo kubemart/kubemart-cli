@@ -15,7 +15,6 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -62,6 +61,8 @@ type AppManifest struct {
 			Value string `yaml:"value"`
 		} `yaml:"configuration"`
 	} `yaml:"plans"`
+	Version  string `yaml:"version"`
+	Category string `yaml:"category"`
 }
 
 // KubemartConfigFile is the structure of ~/.kubemart/config.json file
@@ -453,82 +454,161 @@ func GetPostInstallMarkdown(appName string) (string, error) {
 	return out, nil
 }
 
-// GetAppPlans returns sorted app plans e.g. [5,10,20]
-func GetAppPlans(appName string) ([]int, error) {
-	plans := []int{}
+func GetAppManifest(appName string) (AppManifest, error) {
+	manifest := AppManifest{}
 	bp, err := GetKubemartPaths()
 	if err != nil {
-		return plans, err
+		return manifest, err
 	}
 
 	appManifestPath := fmt.Sprintf("%s/%s/manifest.yaml", bp.AppsDirectoryPath, appName)
 	file, err := ioutil.ReadFile(appManifestPath)
 	if err != nil {
-		return plans, err
+		return manifest, err
 	}
 
-	manifest := AppManifest{}
 	err = yaml.Unmarshal(file, &manifest)
+	if err != nil {
+		return manifest, err
+	}
+
+	return manifest, nil
+}
+
+// GetAppPlans returns app plan labels e.g. ["5GB", "10GB", "20GB"]
+func GetAppPlans(appName string) ([]string, error) {
+	plans := []string{}
+	manifest, err := GetAppManifest(appName)
 	if err != nil {
 		return plans, err
 	}
 
 	for _, plan := range manifest.Plans {
-		conf := plan.Configuration
-		keys := reflect.ValueOf(conf).MapKeys()
-		strKeys := make([]string, len(keys))
-		for i := 0; i < len(keys); i++ {
-			strKeys[i] = keys[i].String()
-		}
-
-		for _, key := range strKeys {
-			p := ExtractPlanIntFromPlanStr(conf[key].Value)
-			if p > 0 {
-				plans = append(plans, p)
-			}
-		}
+		label := plan.Label
+		plans = append(plans, label)
 	}
 
-	sort.Ints(plans)
 	return plans, nil
 }
 
-// GetSmallestAppPlan take sorted plans slice e.g. [5,10,20] and return
-// the smallest one e.g. 5 (int)
-func GetSmallestAppPlan(sortedPlans []int) int {
-	return sortedPlans[0]
+// GetSmallestAppPlan take plan labels slice e.g. ["5GB", "10GB", "20GB"]
+// and return the first one e.g. 5GB (string)
+func GetSmallestAppPlan(plans []string) string {
+	return plans[0]
+}
+
+func GetAppPlanVariableName(appName string) (string, error) {
+	manifest, err := GetAppManifest(appName)
+	if err != nil {
+		return "", err
+	}
+
+	planVariableNames := []string{}
+	for _, plan := range manifest.Plans {
+		conf := plan.Configuration
+		keys := reflect.ValueOf(conf).MapKeys()
+		for i := 0; i < len(keys); i++ {
+			planVariableNames = append(planVariableNames, keys[i].String())
+		}
+	}
+
+	return planVariableNames[0], nil
+}
+
+// GetAppPlanValueByLabel will return the value of the plan. For example,
+// if the planLabel is "5GB" and the app is "wordpress", this will return "5Gi".
+func GetAppPlanValueByLabel(appName, planLabel string) (string, error) {
+	planValue := ""
+
+	manifest, err := GetAppManifest(appName)
+	if err != nil {
+		return planValue, err
+	}
+
+	for _, plan := range manifest.Plans {
+		if plan.Label == planLabel {
+			confKey, err := GetAppPlanVariableName(appName)
+			if err != nil {
+				return planValue, err
+			}
+
+			planValue = plan.Configuration[confKey].Value
+		}
+	}
+
+	return planValue, nil
 }
 
 // GetKubeconfig will load kubeconfig from KUBECONFIG environment variable.
 // If it's empty, it will load from ~/.kube/config file.
-func GetKubeconfig() clientcmd.ClientConfig {
+func GetKubeconfig() (clientcmd.ClientConfig, error) {
+	var cc clientcmd.ClientConfig
+
+	val, present := os.LookupEnv("KUBECONFIG")
+	if present {
+		paths := strings.Split(val, ":")
+		filepath := paths[0]
+		file, err := os.Open(filepath)
+		if err != nil {
+			fmt.Printf("Unable to open kubeconfig file (%s). Perhaps it's empty?\n", filepath)
+			return cc, err
+		}
+
+		fileinfo, _ := file.Stat()
+		if err != nil {
+			fmt.Printf("Unable to retrieve kubeconfig file (%s) info\n", filepath)
+			return cc, err
+		}
+
+		if fileinfo.Size() == 0 {
+			fmt.Printf("Kubeconfig file (%s) is empty\n", filepath)
+			return cc, err
+		}
+	}
+
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	configOverrides := &clientcmd.ConfigOverrides{}
 	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
-	return kubeConfig
+	return kubeConfig, nil
 }
 
 // GetRESTConfig returns the kubeconfig's REST config
 func GetRESTConfig() (*rest.Config, error) {
-	kubeConfig := GetKubeconfig()
+	var rc *rest.Config
+
+	kubeConfig, err := GetKubeconfig()
+	if err != nil {
+		return rc, err
+	}
+
 	restConfig, err := kubeConfig.ClientConfig()
 	if err != nil {
-		return restConfig, err
+		return rc, err
 	}
+
 	DebugPrintf("Loading REST config for host %v\n", restConfig.Host)
 	return restConfig, nil
 }
 
 // GetConfigAccess returns ConfigAccess
-func GetConfigAccess() clientcmd.ConfigAccess {
-	kubeConfig := GetKubeconfig()
+func GetConfigAccess() (clientcmd.ConfigAccess, error) {
+	var ca clientcmd.ConfigAccess
+	kubeConfig, err := GetKubeconfig()
+	if err != nil {
+		return ca, err
+	}
+
 	configAccess := kubeConfig.ConfigAccess()
-	return configAccess
+	return configAccess, nil
 }
 
 // GetCurrentContext returns current/active kubeconfig context
 func GetCurrentContext() (string, error) {
-	configAccess := GetConfigAccess()
+	configAccess, err := GetConfigAccess()
+	if err != nil {
+		return "", err
+	}
+
 	config, err := configAccess.GetStartingConfig()
 	if err != nil {
 		return "", err
@@ -545,7 +625,11 @@ func GetClusterName() (string, error) {
 		return "", err
 	}
 
-	configAccess := GetConfigAccess()
+	configAccess, err := GetConfigAccess()
+	if err != nil {
+		return "", err
+	}
+
 	config, err := configAccess.GetStartingConfig()
 	if err != nil {
 		return "", err
@@ -619,7 +703,11 @@ func SanitizeVersionSegment(input string) string {
 
 // GetMasterIP returns the master/control-plane IP address
 func GetMasterIP() (string, error) {
-	kubeConfig := GetKubeconfig()
+	kubeConfig, err := GetKubeconfig()
+	if err != nil {
+		return "", err
+	}
+
 	restConfig, err := kubeConfig.ClientConfig()
 	if err != nil {
 		return "", err
@@ -630,15 +718,19 @@ func GetMasterIP() (string, error) {
 
 // IsCRDExist will search for a CRD by crdName and returns 'true'
 // if it exists. Otherwise, it will returns 'false'.
-func IsCRDExist(crdName string) bool {
+func IsCRDExist(crdName string) (bool, error) {
 	clientset, err := GetKubeAPIExtensionClientSet()
 	if err != nil {
-		return false
+		return false, err
 	}
 
 	crdClient := clientset.ApiextensionsV1().CustomResourceDefinitions()
 	_, err = crdClient.Get(context.Background(), crdName, metav1.GetOptions{})
-	return err == nil
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 // ApplyManifests takes k8s YAML manifests and apply them using SSA
@@ -928,4 +1020,32 @@ func GetLatestManifests() (string, error) {
 
 	manifests = buf.String()
 	return manifests, nil
+}
+
+// IsServiceAccountExist returns true if the "kubemart-daemon-svc-acc" SA
+// found in "kubemart-system" namespace
+func IsServiceAccountExist() (bool, error) {
+	saName := "kubemart-daemon-svc-acc"
+	namespace := "kubemart-system"
+
+	clientset, err := GetKubeClientSet()
+	if err != nil {
+		return false, err
+	}
+
+	saClient := clientset.CoreV1().ServiceAccounts(namespace)
+	sa, err := saClient.Get(context.Background(), saName, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	if !sa.DeletionTimestamp.IsZero() {
+		DebugPrintf("%s service account still exists and it's being terminated\n", &sa.ObjectMeta.Name)
+		return true, nil
+	}
+
+	return true, nil
 }

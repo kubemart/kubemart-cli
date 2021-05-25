@@ -10,7 +10,6 @@ package cmd
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -128,14 +127,9 @@ func TestInstall(t *testing.T) {
 		rootCmd.Execute()
 	})
 
-	expected1 := "App created successfully"
-	if !strings.Contains(actual, expected1) {
-		t.Errorf("Expecting output to contain %s but got %s", expected1, actual)
-	}
-
-	expected2 := "App post-install notes:"
-	if !strings.Contains(actual, expected2) {
-		t.Errorf("Expecting output to contain %s but got %s", expected2, actual)
+	expected := "App(s) created successfully: rabbitmq"
+	if !strings.Contains(actual, expected) {
+		t.Errorf("Expecting output to contain %s but got %s", expected, actual)
 	}
 }
 
@@ -190,7 +184,7 @@ func TestUninstall(t *testing.T) {
 		rootCmd.Execute()
 	})
 
-	expected := "rabbitmq app is now scheduled to be deleted"
+	expected := "App(s) now scheduled for deletion: rabbitmq"
 	if !strings.Contains(actual, expected) {
 		t.Errorf("Expecting output to contain %s but got %s", expected, actual)
 	}
@@ -209,7 +203,12 @@ func TestUpdate(t *testing.T) {
 			break
 		}
 
-		_, err := GetApp(appName)
+		cs, err := NewClientFromLocalKubeConfig()
+		if err != nil {
+			t.Error(err)
+		}
+
+		_, err = cs.GetApp(appName)
 		if err != nil {
 			canInstall = true
 			break
@@ -280,28 +279,31 @@ func TestVersionVerbose(t *testing.T) {
 
 func TestInstallAppWithPlan(t *testing.T) {
 	appName := "mariadb"
-	plan := 10
+	plan := "10GB"
+	appWithPlan := fmt.Sprintf("%v:%v", appName, plan)
 
 	actual, _ := test.RecordStdOutStdErr(func() {
 		rootCmd.SetArgs([]string{
 			"install",
-			appName,
-			"--plan",
-			strconv.Itoa(plan),
-			"--quiet",
+			appWithPlan,
 		})
 		rootCmd.Execute()
 	})
 
-	expected := "App created successfully"
+	expected := "App(s) created successfully: mariadb"
 	if !strings.Contains(actual, expected) {
 		t.Errorf("Expecting output to contain %s but got %s", expected, actual)
 	}
 
-	app, _ := GetApp(appName)
+	cs, err := NewClientFromLocalKubeConfig()
+	if err != nil {
+		t.Error(err)
+	}
+
+	app, _ := cs.GetApp(appName)
 	actualPlan := app.Spec.Plan
-	expectedPlan := plan
+	expectedPlan := "10Gi"
 	if expectedPlan != actualPlan {
-		t.Errorf("Expecting %d Gi plan but got %d Gi", expectedPlan, actualPlan)
+		t.Errorf("Expecting %s plan but got %s", expectedPlan, actualPlan)
 	}
 }
