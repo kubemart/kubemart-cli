@@ -1021,3 +1021,31 @@ func GetLatestManifests() (string, error) {
 	manifests = buf.String()
 	return manifests, nil
 }
+
+// IsServiceAccountExist returns true if the "kubemart-daemon-svc-acc" SA
+// found in "kubemart-system" namespace
+func IsServiceAccountExist() (bool, error) {
+	saName := "kubemart-daemon-svc-acc"
+	namespace := "kubemart-system"
+
+	clientset, err := GetKubeClientSet()
+	if err != nil {
+		return false, err
+	}
+
+	saClient := clientset.CoreV1().ServiceAccounts(namespace)
+	sa, err := saClient.Get(context.Background(), saName, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	if !sa.DeletionTimestamp.IsZero() {
+		DebugPrintf("%s service account still exists and it's being terminated\n", &sa.ObjectMeta.Name)
+		return true, nil
+	}
+
+	return true, nil
+}

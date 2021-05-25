@@ -78,6 +78,13 @@ var (
 				}
 				fmt.Printf("ConfigMap (kubemart-config) status: %s\n", configMapStatus)
 
+				saStatus := "not created"
+				saExists, _ := utils.IsServiceAccountExist()
+				if saExists {
+					saStatus = "created"
+				}
+				fmt.Printf("ServiceAccount (kubemart-daemon-svc-acc) status: %s\n", saStatus)
+
 				res, err := latest.Check(githubTag, strings.Replace(VersionCli, "v", "", 1))
 				if err != nil {
 					fmt.Printf("Checking for a newer version failed with %s\n", err)
