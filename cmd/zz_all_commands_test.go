@@ -127,14 +127,9 @@ func TestInstall(t *testing.T) {
 		rootCmd.Execute()
 	})
 
-	expected1 := "App rabbitmq created successfully"
-	if !strings.Contains(actual, expected1) {
-		t.Errorf("Expecting output to contain %s but got %s", expected1, actual)
-	}
-
-	expected2 := "App rabbitmq post-install notes:"
-	if !strings.Contains(actual, expected2) {
-		t.Errorf("Expecting output to contain %s but got %s", expected2, actual)
+	expected := "App(s) created successfully: rabbitmq"
+	if !strings.Contains(actual, expected) {
+		t.Errorf("Expecting output to contain %s but got %s", expected, actual)
 	}
 }
 
@@ -189,7 +184,7 @@ func TestUninstall(t *testing.T) {
 		rootCmd.Execute()
 	})
 
-	expected := "rabbitmq app is now scheduled to be deleted"
+	expected := "App(s) now scheduled for deletion: rabbitmq"
 	if !strings.Contains(actual, expected) {
 		t.Errorf("Expecting output to contain %s but got %s", expected, actual)
 	}
@@ -291,7 +286,6 @@ func TestInstallAppWithPlan(t *testing.T) {
 		rootCmd.SetArgs([]string{
 			"install",
 			appWithPlan,
-			"--quiet",
 		})
 		rootCmd.Execute()
 	})
