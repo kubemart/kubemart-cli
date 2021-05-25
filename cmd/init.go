@@ -17,7 +17,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	utils "github.com/kubemart/kubemart-cli/pkg/utils"
@@ -58,47 +57,9 @@ var initCmd = &cobra.Command{
 		}
 		utils.DebugPrintf("Kubemart ConfigMap: %+v\n", bcm)
 
-		gitProgram := "git"
-		if !utils.IsCommandAvailable(gitProgram) {
-			return fmt.Errorf("%s program not found - please install it first and retry", gitProgram)
-		}
-
-		kubemartPaths, err := utils.GetKubemartPaths()
+		err = utils.CloneAppFilesIfNotExist()
 		if err != nil {
-			return fmt.Errorf("unable to load Kubemart paths - %v", err.Error())
-		}
-
-		kubemartDirPath := kubemartPaths.RootDirectoryPath
-		appsDirPath := kubemartPaths.AppsDirectoryPath
-		configFilePath := kubemartPaths.ConfigFilePath
-		if _, err := os.Stat(kubemartDirPath); os.IsNotExist(err) {
-			// When kubemartDir is not exist, create it (with apps folder and config.json file)
-			fmt.Println("Fetching apps...")
-
-			// Create apps folder
-			err = os.MkdirAll(appsDirPath, 0755)
-			if err != nil {
-				return fmt.Errorf("unable to create ~/.kubemart/apps directory ($ mkdir -p ~/.kubemart/apps)")
-			}
-
-			// Create config.json file
-			_, err := os.Create(configFilePath)
-			if err != nil {
-				return fmt.Errorf("unable to create ~/.kubemart/config.json file")
-			}
-
-			// Clone
-			cloneOutput, err := utils.GitClone(appsDirPath)
-			if err != nil {
-				return fmt.Errorf("unable to clone marketplace - %v", err)
-			}
-			utils.DebugPrintf("Clone output: %s\n", cloneOutput)
-
-			// Update timestamp
-			err = utils.UpdateConfigFileLastUpdatedTimestamp()
-			if err != nil {
-				return fmt.Errorf("unable to config file's timestamp field - %v", err)
-			}
+			return err
 		}
 
 		namespaceExists, err := utils.IsNamespaceExist("kubemart-system")

@@ -1051,3 +1051,60 @@ func IsServiceAccountExist() (bool, error) {
 
 	return true, nil
 }
+
+// CloneAppFilesIfNotExist will perform 'git clone' operation by cloning
+// apps from marketplace repository. If the '~/.kubemart' already exists,
+// it will not proceed with clone operation and return `nil` error.
+func CloneAppFilesIfNotExist() error {
+	kubemartPaths, err := GetKubemartPaths()
+	if err != nil {
+		return fmt.Errorf("unable to load Kubemart paths - %v", err.Error())
+	}
+
+	kubemartDirPath := kubemartPaths.RootDirectoryPath
+	appsDirPath := kubemartPaths.AppsDirectoryPath
+	configFilePath := kubemartPaths.ConfigFilePath
+
+	// Do not clone if kubemartDir already exist
+	_, err = os.Stat(kubemartDirPath)
+	if !os.IsNotExist(err) {
+		DebugPrintf("%s already exist. Skipping clone operation.\n", kubemartDirPath)
+		return nil
+	}
+
+	// Check if git is installed
+	gitProgram := "git"
+	if !IsCommandAvailable(gitProgram) {
+		return fmt.Errorf("%s program not found - please install it first and retry", gitProgram)
+	}
+
+	// When kubemartDir is not exist, create it (with apps folder and config.json file)
+	fmt.Println("Fetching apps...")
+
+	// Create apps folder
+	err = os.MkdirAll(appsDirPath, 0755)
+	if err != nil {
+		return fmt.Errorf("unable to create ~/.kubemart/apps directory ($ mkdir -p ~/.kubemart/apps)")
+	}
+
+	// Create config.json file
+	_, err = os.Create(configFilePath)
+	if err != nil {
+		return fmt.Errorf("unable to create ~/.kubemart/config.json file")
+	}
+
+	// Clone
+	cloneOutput, err := GitClone(appsDirPath)
+	if err != nil {
+		return fmt.Errorf("unable to clone marketplace - %v", err)
+	}
+	DebugPrintf("Clone output: %s\n", cloneOutput)
+
+	// Update timestamp
+	err = UpdateConfigFileLastUpdatedTimestamp()
+	if err != nil {
+		return fmt.Errorf("unable to config file's timestamp field - %v", err)
+	}
+
+	return nil
+}
