@@ -24,9 +24,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// When this is true, do not print post-install message
-var HidePostInstall bool
-
 // installCmd represents the install command
 var installCmd = &cobra.Command{
 	Use:     "install APP_NAME[:PLAN]",
@@ -103,6 +100,8 @@ func PreRunInstall(cmd *cobra.Command, args []string) (map[string]string, error)
 }
 
 func (cs *Clientset) RunInstall(processedAppsAndPlanLabels map[string]string) error {
+	createdApps := []string{}
+
 	for appName, appPlan := range processedAppsAndPlanLabels {
 		if appPlan != "" {
 			plan, err := utils.GetAppPlanValueByLabel(appName, appPlan)
@@ -115,16 +114,13 @@ func (cs *Clientset) RunInstall(processedAppsAndPlanLabels map[string]string) er
 		created, err := cs.CreateApp(appName, appPlan)
 		if !created {
 			return fmt.Errorf("%s app creation failed - %+v", appName, err.Error())
+		} else {
+			createdApps = append(createdApps, appName)
 		}
+	}
 
-		fmt.Printf("App %s created successfully\n", appName)
-		if !HidePostInstall {
-			postInstallMsg, err := utils.GetPostInstallMarkdown(appName)
-			if err == nil {
-				fmt.Printf("App %s post-install notes:\n", appName)
-				fmt.Println(postInstallMsg)
-			}
-		}
+	if len(createdApps) > 0 {
+		fmt.Printf("App(s) created successfully: %s\n", strings.Join(createdApps, ", "))
 	}
 
 	return nil
@@ -132,7 +128,6 @@ func (cs *Clientset) RunInstall(processedAppsAndPlanLabels map[string]string) er
 
 func init() {
 	rootCmd.AddCommand(installCmd)
-	installCmd.Flags().BoolVarP(&HidePostInstall, "quiet", "q", false, "do not show post-install message")
 
 	// Here you will define your flags and configuration settings.
 
