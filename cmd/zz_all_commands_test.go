@@ -290,7 +290,7 @@ func TestInstallAppWithPlan(t *testing.T) {
 		rootCmd.Execute()
 	})
 
-	expected := "App mariadb created successfully"
+	expected := "App(s) created successfully: mariadb"
 	if !strings.Contains(actual, expected) {
 		t.Errorf("Expecting output to contain %s but got %s", expected, actual)
 	}
