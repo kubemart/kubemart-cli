@@ -383,6 +383,7 @@ func UpdateAppsCacheIfStale() (bool, error) {
 
 	// when the apps are fresh
 	if diff < allowedSeconds {
+		DebugPrintf("Apps are still fresh. Git pull is not needed.\n")
 		return true, nil
 	}
 
@@ -393,6 +394,7 @@ func UpdateAppsCacheIfStale() (bool, error) {
 	}
 
 	appsFolder := bp.AppsDirectoryPath
+	DebugPrintf("Running 'git pull' to download latest apps\n")
 	pullOutput, err := GitPull(appsFolder)
 	if err != nil {
 		errMsgTemplate := "Unable to Git pull latest apps - %v\n"

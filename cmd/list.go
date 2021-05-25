@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/kubemart/kubemart-cli/pkg/utils"
 	"github.com/spf13/cobra"
@@ -41,13 +42,27 @@ var listCmd = &cobra.Command{
 			return err
 		}
 
-		appNames := []string{}
+		w := tabwriter.NewWriter(os.Stdout, 15, 0, 1, ' ', tabwriter.TabIndent)
+		fmt.Fprintln(w, "NAME\tVERSION\tCATEGORY\tPLANS\tDEPENDENCIES")
 		for _, m := range sortmap.ByKey(manifests) {
-			appName := fmt.Sprintf("%v", m.Key)
-			appNames = append(appNames, appName)
+			name := fmt.Sprintf("%s", m.Key)
+			manifest := manifests[name]
+
+			version := fmt.Sprintf("\t%s", manifest.Version)
+			category := fmt.Sprintf("\t%s", manifest.Category)
+
+			planz := []string{}
+			for _, plan := range manifest.Plans {
+				planz = append(planz, plan.Label)
+			}
+			plans := fmt.Sprintf("\t%s", strings.Join(planz, ", "))
+
+			dependenciez := manifest.Dependencies
+			dependencies := fmt.Sprintf("\t%s", strings.Join(dependenciez, ", "))
+			fmt.Fprintln(w, name, version, category, plans, dependencies)
 		}
 
-		fmt.Println(strings.Join(appNames, "\n"))
+		w.Flush()
 		return nil
 	},
 }
