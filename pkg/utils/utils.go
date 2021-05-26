@@ -408,7 +408,7 @@ func UpdateAppsCacheIfStale() (bool, error) {
 		return false, fmt.Errorf("unable to config file's timestamp field - %v", err)
 	}
 
-	DebugPrintf("Config file's timestamp field updated successfully")
+	DebugPrintf("Config file's timestamp field updated successfully\n")
 	return true, nil
 }
 
