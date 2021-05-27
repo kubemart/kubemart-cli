@@ -27,7 +27,7 @@ import (
 // installCmd represents the install command
 var installCmd = &cobra.Command{
 	Use:     "install APP_NAME[:PLAN]",
-	Example: "kubemart install rabbitmq\nkubemart install wordpress:10GB,jenkins:10GB",
+	Example: "kubemart install rabbitmq\nkubemart install wordpress:10GB,linkerd:\"Linkerd with Dashboard\"",
 	Short:   "Install application(s)",
 	Args:    cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -88,7 +88,7 @@ func PreRunInstall(cmd *cobra.Command, args []string) (map[string]string, error)
 			}
 
 			if !sliceutil.Contains(appPlanLabels, planLabel) {
-				return appsAndPlanLabels, fmt.Errorf("the given plan is not supported for %s app - supported values are %v", appName, appPlanLabels)
+				return appsAndPlanLabels, fmt.Errorf("the given plan is not supported for %s app - supported values are %v", appName, strings.Join(appPlanLabels, ", "))
 			}
 		}
 
