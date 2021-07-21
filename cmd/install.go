@@ -31,12 +31,12 @@ var installCmd = &cobra.Command{
 	Short:   "Install application(s)",
 	Args:    cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		processedAppsAndPlanLabels, err := PreRunInstall(cmd, args)
+		cs, err := NewClientFromLocalKubeConfig()
 		if err != nil {
 			return err
 		}
 
-		cs, err := NewClientFromLocalKubeConfig()
+		processedAppsAndPlanLabels, err := cs.PreRunInstall(cmd, args)
 		if err != nil {
 			return err
 		}
@@ -50,7 +50,29 @@ var installCmd = &cobra.Command{
 	},
 }
 
-func PreRunInstall(cmd *cobra.Command, args []string) (map[string]string, error) {
+func (cs *Clientset) HasTerminatingDependency(appName string) ([]string, bool) {
+	terminatingApps := []string{}
+	appManifest, err := utils.GetAppManifest(appName)
+	if err != nil {
+		return terminatingApps, false
+	}
+
+	for _, dep := range appManifest.Dependencies {
+		depName := strings.Split(dep, ":")[0]
+		app, err := cs.GetApp(strings.ToLower(depName))
+		if err == nil && !app.ObjectMeta.DeletionTimestamp.IsZero() {
+			terminatingApps = append(terminatingApps, strings.ToLower(depName))
+		}
+	}
+
+	if len(terminatingApps) > 0 {
+		return terminatingApps, true
+	}
+
+	return terminatingApps, false
+}
+
+func (cs *Clientset) PreRunInstall(cmd *cobra.Command, args []string) (map[string]string, error) {
 	appsAndPlanLabels := make(map[string]string)
 
 	appsCombined := args[0]
@@ -58,6 +80,13 @@ func PreRunInstall(cmd *cobra.Command, args []string) (map[string]string, error)
 	for _, app := range apps {
 		splitted := strings.Split(app, ":")
 		appName := splitted[0]
+		terminatingDeps, hasTerminatingDeps := cs.HasTerminatingDependency(appName)
+		if hasTerminatingDeps {
+			terminatingDepz := strings.Join(terminatingDeps, ",")
+			errMsg := fmt.Errorf("%s app can't be installed because it has terminating dependencies (%s) - please try again later", appName, terminatingDepz)
+			return appsAndPlanLabels, errMsg
+		}
+
 		appPlanLabel := ""
 
 		if len(splitted) > 1 {
