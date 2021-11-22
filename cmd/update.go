@@ -20,9 +20,9 @@ import (
 	"fmt"
 
 	utils "github.com/kubemart/kubemart-cli/pkg/utils"
-	"github.com/kubemart/kubemart-operator/apis/kubemart.civo.com/v1alpha1"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 )
 
 // updateCmd represents the update command
@@ -53,26 +53,22 @@ func runUpdate(appName *string) error {
 		return err
 	}
 
-	// Prevent 'Invalid value: 0x0: must be specified for an update'
-	// error from happening
-	// https://github.com/argoproj/argo-cd/issues/3657#issuecomment-722706739
-	app, err := cs.KubemartV1alpha1().Apps(targetNamespace).Get(context.Background(), *appName, v1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	toUpdateApp := &v1alpha1.App{
-		ObjectMeta: v1.ObjectMeta{
-			Name: *appName,
-		},
-		Spec: v1alpha1.AppSpec{
-			Action: "update",
-		},
-	}
-	toUpdateApp.SetResourceVersion(app.GetResourceVersion())
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		// Retrieve the latest version of App before attempting update
+		// RetryOnConflict uses exponential backoff to avoid exhausting the apiserver
+		// For detailed explanation, refer to:
+		// https://github.com/kubernetes/client-go/blob/master/examples/create-update-delete-deployment/main.go
+		result, getErr := cs.KubemartV1alpha1().Apps(targetNamespace).Get(context.Background(), *appName, v1.GetOptions{})
+		if getErr != nil {
+			return fmt.Errorf("failed to get latest version of app: %v", getErr)
+		}
 
-	_, err = cs.KubemartV1alpha1().Apps(targetNamespace).Update(context.Background(), toUpdateApp, v1.UpdateOptions{})
-	if err != nil {
-		return fmt.Errorf("unable to update app - %v", err)
+		result.Spec.Action = "update"
+		_, updateErr := cs.KubemartV1alpha1().Apps(targetNamespace).Update(context.Background(), result, v1.UpdateOptions{})
+		return updateErr
+	})
+	if retryErr != nil {
+		return fmt.Errorf("unable to update app - %v", retryErr)
 	}
 
 	fmt.Printf("%s app is now scheduled to be updated\n", *appName)
