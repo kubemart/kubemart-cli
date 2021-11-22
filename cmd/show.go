@@ -16,10 +16,12 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/kubemart/kubemart-cli/pkg/utils"
 	"github.com/spf13/cobra"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // showCmd represents the show command
@@ -29,12 +31,7 @@ var showCmd = &cobra.Command{
 	Short:   "Show the application's post-install message",
 	Args:    cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cs, err := NewClientFromLocalKubeConfig()
-		if err != nil {
-			return err
-		}
-
-		err = cs.RunShow(args)
+		err = runShow(args)
 		if err != nil {
 			return err
 		}
@@ -43,14 +40,19 @@ var showCmd = &cobra.Command{
 	},
 }
 
-func (cs *Clientset) RunShow(args []string) error {
+func runShow(args []string) error {
+	cs, err := NewClientFromLocalKubeConfig()
+	if err != nil {
+		return err
+	}
+
 	appName := args[0]
 	if appName == "" {
 		return fmt.Errorf("app name is empty")
 	}
 
 	// check if app exists in cluster
-	_, err := cs.GetApp(appName)
+	_, err = cs.KubemartV1alpha1().Apps(targetNamespace).Get(context.Background(), appName, v1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("%s app is not installed in this cluster", appName)
 	}

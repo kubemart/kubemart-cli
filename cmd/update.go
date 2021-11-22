@@ -16,10 +16,13 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	utils "github.com/kubemart/kubemart-cli/pkg/utils"
+	"github.com/kubemart/kubemart-operator/apis/kubemart.civo.com/v1alpha1"
 	"github.com/spf13/cobra"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // updateCmd represents the update command
@@ -35,12 +38,7 @@ var updateCmd = &cobra.Command{
 		}
 		utils.DebugPrintf("App name to update: %s\n", appName)
 
-		cs, err := NewClientFromLocalKubeConfig()
-		if err != nil {
-			return err
-		}
-
-		err = cs.RunUpdate(&appName)
+		err = runUpdate(&appName)
 		if err != nil {
 			return err
 		}
@@ -49,8 +47,24 @@ var updateCmd = &cobra.Command{
 	},
 }
 
-func (cs *Clientset) RunUpdate(appName *string) error {
-	err := cs.UpdateApp(*appName)
+func runUpdate(appName *string) error {
+	cs, err := NewClientFromLocalKubeConfig()
+	if err != nil {
+		return err
+	}
+
+	_, err = cs.KubemartV1alpha1().Apps(targetNamespace).Update(
+		context.Background(),
+		&v1alpha1.App{
+			ObjectMeta: v1.ObjectMeta{
+				Name: *appName,
+			},
+			Spec: v1alpha1.AppSpec{
+				Action: "update",
+			},
+		},
+		v1.UpdateOptions{},
+	)
 	if err != nil {
 		return fmt.Errorf("unable to update app - %v", err)
 	}

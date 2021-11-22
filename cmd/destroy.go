@@ -16,12 +16,14 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/kubemart/kubemart-cli/pkg/utils"
 	"github.com/spf13/cobra"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var proceedWithoutPrompt bool
@@ -50,7 +52,7 @@ var destroyCmd = &cobra.Command{
 			return err
 		}
 
-		apps, err := cs.ListApps()
+		apps, err := cs.KubemartV1alpha1().Apps(targetNamespace).List(context.Background(), v1.ListOptions{})
 		if err != nil {
 			return err
 		}
@@ -59,14 +61,14 @@ var destroyCmd = &cobra.Command{
 		for _, app := range apps.Items {
 			appName := app.ObjectMeta.Name
 			fmt.Printf("Deleting %s app...\n", appName)
-			err := cs.DeleteApp(appName)
+			err := cs.KubemartV1alpha1().Apps(targetNamespace).Delete(context.Background(), appName, v1.DeleteOptions{})
 			if err != nil {
 				return err
 			}
 
 			fmt.Printf("Waiting %s app to get deleted...\n", appName)
 			for i := 0; i < 120; i++ {
-				_, err := cs.GetApp(appName)
+				_, err := cs.KubemartV1alpha1().Apps(targetNamespace).Get(context.Background(), appName, v1.GetOptions{})
 				if err != nil {
 					fmt.Printf("%s app has been deleted...\n", appName)
 					deletedApps = append(deletedApps, appName)

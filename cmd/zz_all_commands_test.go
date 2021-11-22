@@ -9,12 +9,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/kubemart/kubemart-cli/test"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestDestroyPrompt(t *testing.T) {
@@ -208,7 +210,7 @@ func TestUpdate(t *testing.T) {
 			t.Error(err)
 		}
 
-		_, err = cs.GetApp(appName)
+		_, err = cs.KubemartV1alpha1().Apps(targetNamespace).Get(context.Background(), appName, v1.GetOptions{})
 		if err != nil {
 			canInstall = true
 			break
@@ -300,7 +302,7 @@ func TestInstallAppWithPlan(t *testing.T) {
 		t.Error(err)
 	}
 
-	app, _ := cs.GetApp(appName)
+	app, _ := cs.KubemartV1alpha1().Apps(targetNamespace).Get(context.Background(), appName, v1.GetOptions{})
 	actualPlan := app.Spec.Plan
 	expectedPlan := "10Gi"
 	if expectedPlan != actualPlan {

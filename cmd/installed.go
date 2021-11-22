@@ -16,11 +16,13 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // installedCmd represents the installed command
@@ -29,12 +31,7 @@ var installedCmd = &cobra.Command{
 	Example: "kubemart installed",
 	Short:   "List all installed applications",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cs, err := NewClientFromLocalKubeConfig()
-		if err != nil {
-			return err
-		}
-
-		err = cs.RunInstalled()
+		err = runInstalled()
 		if err != nil {
 			return err
 		}
@@ -43,8 +40,13 @@ var installedCmd = &cobra.Command{
 	},
 }
 
-func (cs *Clientset) RunInstalled() error {
-	apps, err := cs.ListApps()
+func runInstalled() error {
+	cs, err := NewClientFromLocalKubeConfig()
+	if err != nil {
+		return err
+	}
+
+	apps, err := cs.KubemartV1alpha1().Apps(targetNamespace).List(context.Background(), v1.ListOptions{})
 	if err != nil {
 		return err
 	}

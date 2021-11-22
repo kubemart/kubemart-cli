@@ -16,13 +16,21 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/forestgiant/sliceutil"
-	utils "github.com/kubemart/kubemart-cli/pkg/utils"
+	"github.com/kubemart/kubemart-cli/pkg/utils"
+
+	"github.com/kubemart/kubemart-operator/apis/kubemart.civo.com/v1alpha1"
+	kubemartclient "github.com/kubemart/kubemart-operator/pkg/client/clientset/versioned"
 	"github.com/spf13/cobra"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+var cs *kubemartclient.Clientset
+var err error
 
 // installCmd represents the install command
 var installCmd = &cobra.Command{
@@ -31,17 +39,17 @@ var installCmd = &cobra.Command{
 	Short:   "Install application(s)",
 	Args:    cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cs, err := NewClientFromLocalKubeConfig()
+		cs, err = NewClientFromLocalKubeConfig()
 		if err != nil {
 			return err
 		}
 
-		processedAppsAndPlanLabels, err := cs.PreRunInstall(cmd, args)
+		processedAppsAndPlanLabels, err := preRunInstall(cmd, args)
 		if err != nil {
 			return err
 		}
 
-		err = cs.RunInstall(processedAppsAndPlanLabels)
+		err = runInstall(processedAppsAndPlanLabels)
 		if err != nil {
 			return err
 		}
@@ -50,7 +58,7 @@ var installCmd = &cobra.Command{
 	},
 }
 
-func (cs *Clientset) HasTerminatingDependency(appName string) ([]string, bool) {
+func hasTerminatingDependency(appName string) ([]string, bool) {
 	terminatingApps := []string{}
 	appManifest, err := utils.GetAppManifest(appName)
 	if err != nil {
@@ -59,7 +67,7 @@ func (cs *Clientset) HasTerminatingDependency(appName string) ([]string, bool) {
 
 	for _, dep := range appManifest.Dependencies {
 		depName := strings.Split(dep, ":")[0]
-		app, err := cs.GetApp(strings.ToLower(depName))
+		app, err := cs.KubemartV1alpha1().Apps(targetNamespace).Get(context.Background(), strings.ToLower(depName), v1.GetOptions{})
 		if err == nil && !app.ObjectMeta.DeletionTimestamp.IsZero() {
 			terminatingApps = append(terminatingApps, strings.ToLower(depName))
 		}
@@ -72,7 +80,7 @@ func (cs *Clientset) HasTerminatingDependency(appName string) ([]string, bool) {
 	return terminatingApps, false
 }
 
-func (cs *Clientset) PreRunInstall(cmd *cobra.Command, args []string) (map[string]string, error) {
+func preRunInstall(cmd *cobra.Command, args []string) (map[string]string, error) {
 	appsAndPlanLabels := make(map[string]string)
 
 	appsCombined := args[0]
@@ -80,7 +88,7 @@ func (cs *Clientset) PreRunInstall(cmd *cobra.Command, args []string) (map[strin
 	for _, app := range apps {
 		splitted := strings.Split(app, ":")
 		appName := splitted[0]
-		terminatingDeps, hasTerminatingDeps := cs.HasTerminatingDependency(appName)
+		terminatingDeps, hasTerminatingDeps := hasTerminatingDependency(appName)
 		if hasTerminatingDeps {
 			terminatingDepz := strings.Join(terminatingDeps, ",")
 			errMsg := fmt.Errorf("%s app can't be installed because it has terminating dependencies (%s) - please try again later", appName, terminatingDepz)
@@ -128,7 +136,7 @@ func (cs *Clientset) PreRunInstall(cmd *cobra.Command, args []string) (map[strin
 	return processedAppsAndPlanLabels, nil
 }
 
-func (cs *Clientset) RunInstall(processedAppsAndPlanLabels map[string]string) error {
+func runInstall(processedAppsAndPlanLabels map[string]string) error {
 	createdApps := []string{}
 
 	for appName, appPlan := range processedAppsAndPlanLabels {
@@ -140,12 +148,24 @@ func (cs *Clientset) RunInstall(processedAppsAndPlanLabels map[string]string) er
 			appPlan = plan
 		}
 
-		created, err := cs.CreateApp(appName, appPlan)
-		if !created {
+		_, err := cs.KubemartV1alpha1().Apps(targetNamespace).Create(
+			context.Background(),
+			&v1alpha1.App{
+				ObjectMeta: v1.ObjectMeta{
+					Name: appName,
+				},
+				Spec: v1alpha1.AppSpec{
+					Name:   appName,
+					Action: "install",
+					Plan:   appPlan,
+				},
+			},
+			v1.CreateOptions{},
+		)
+		if err != nil {
 			return fmt.Errorf("%s app creation failed - %+v", appName, err.Error())
-		} else {
-			createdApps = append(createdApps, appName)
 		}
+		createdApps = append(createdApps, appName)
 	}
 
 	if len(createdApps) > 0 {
