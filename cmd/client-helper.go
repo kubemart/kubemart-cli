@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/kubemart/kubemart-cli/pkg/utils"
 	kubemartclient "github.com/kubemart/kubemart-operator/pkg/client/clientset/versioned"
@@ -17,15 +18,15 @@ var targetNamespace = "kubemart-system"
 
 func checkIfCrdExists() error {
 	crdExist, err := utils.IsCRDExist("apps.kubemart.civo.com")
-	if err != nil {
-		return err
-	}
 
-	if !crdExist {
-		errMsg := "App CRD is not found in the cluster\n"
-		errMsg += "You can install it by running 'kubemart init' command"
+	if !crdExist || err != nil {
+		errMsg := strings.Join([]string{
+			"App CRD is not found in the cluster.",
+			"You can install it by running 'kubemart init' command.",
+		}, " ")
 		return fmt.Errorf(errMsg)
 	}
+
 	return nil
 }
 
