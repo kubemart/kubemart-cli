@@ -53,18 +53,24 @@ func runUpdate(appName *string) error {
 		return err
 	}
 
-	_, err = cs.KubemartV1alpha1().Apps(targetNamespace).Update(
-		context.Background(),
-		&v1alpha1.App{
-			ObjectMeta: v1.ObjectMeta{
-				Name: *appName,
-			},
-			Spec: v1alpha1.AppSpec{
-				Action: "update",
-			},
+	// Prevent 'Invalid value: 0x0: must be specified for an update'
+	// error from happening
+	// https://github.com/argoproj/argo-cd/issues/3657#issuecomment-722706739
+	app, err := cs.KubemartV1alpha1().Apps(targetNamespace).Get(context.Background(), *appName, v1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	toUpdateApp := &v1alpha1.App{
+		ObjectMeta: v1.ObjectMeta{
+			Name: *appName,
 		},
-		v1.UpdateOptions{},
-	)
+		Spec: v1alpha1.AppSpec{
+			Action: "update",
+		},
+	}
+	toUpdateApp.SetResourceVersion(app.GetResourceVersion())
+
+	_, err = cs.KubemartV1alpha1().Apps(targetNamespace).Update(context.Background(), toUpdateApp, v1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("unable to update app - %v", err)
 	}
