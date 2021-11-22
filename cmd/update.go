@@ -53,6 +53,15 @@ func runUpdate(appName *string) error {
 		return err
 	}
 
+	app, err := cs.KubemartV1alpha1().Apps(targetNamespace).Get(context.Background(), *appName, v1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if !app.Status.NewUpdateAvailable {
+		return fmt.Errorf("there is no new update available for this app - you are already using the latest version")
+	}
+
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		// Retrieve the latest version of App before attempting update
 		// RetryOnConflict uses exponential backoff to avoid exhausting the apiserver
