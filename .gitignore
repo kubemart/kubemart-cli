@@ -1,3 +1,4 @@
 kubemart
 cmd/manifests/kubemart-operator.yaml
 pkg/utils/rabbitmq.yaml
+kubemart-cli

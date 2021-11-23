@@ -16,10 +16,12 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // uninstallCmd represents the uninstall command
@@ -29,12 +31,7 @@ var uninstallCmd = &cobra.Command{
 	Short:   "Uninstall application(s)",
 	Args:    cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cs, err := NewClientFromLocalKubeConfig()
-		if err != nil {
-			return err
-		}
-
-		err = cs.RunUninstall(args)
+		err = runUninstall(args)
 		if err != nil {
 			return err
 		}
@@ -43,12 +40,17 @@ var uninstallCmd = &cobra.Command{
 	},
 }
 
-func (cs *Clientset) RunUninstall(args []string) error {
+func runUninstall(args []string) error {
+	cs, err := NewClientFromLocalKubeConfig()
+	if err != nil {
+		return err
+	}
+
 	apps := strings.Split(args[0], ",")
 	deletedApps := []string{}
 
 	for _, app := range apps {
-		err := cs.DeleteApp(app)
+		err := cs.KubemartV1alpha1().Apps(targetNamespace).Delete(context.Background(), app, v1.DeleteOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to delete %s app - %v", app, err)
 		}

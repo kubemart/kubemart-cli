@@ -16,10 +16,13 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	utils "github.com/kubemart/kubemart-cli/pkg/utils"
 	"github.com/spf13/cobra"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 )
 
 // updateCmd represents the update command
@@ -35,12 +38,7 @@ var updateCmd = &cobra.Command{
 		}
 		utils.DebugPrintf("App name to update: %s\n", appName)
 
-		cs, err := NewClientFromLocalKubeConfig()
-		if err != nil {
-			return err
-		}
-
-		err = cs.RunUpdate(&appName)
+		err = runUpdate(&appName)
 		if err != nil {
 			return err
 		}
@@ -49,10 +47,37 @@ var updateCmd = &cobra.Command{
 	},
 }
 
-func (cs *Clientset) RunUpdate(appName *string) error {
-	err := cs.UpdateApp(*appName)
+func runUpdate(appName *string) error {
+	cs, err := NewClientFromLocalKubeConfig()
 	if err != nil {
-		return fmt.Errorf("unable to update app - %v", err)
+		return err
+	}
+
+	app, err := cs.KubemartV1alpha1().Apps(targetNamespace).Get(context.Background(), *appName, v1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	if !app.Status.NewUpdateAvailable {
+		return fmt.Errorf("there is no new update available for this app - you are already using the latest version")
+	}
+
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		// Retrieve the latest version of App before attempting update
+		// RetryOnConflict uses exponential backoff to avoid exhausting the apiserver
+		// For detailed explanation, refer to:
+		// https://github.com/kubernetes/client-go/blob/master/examples/create-update-delete-deployment/main.go
+		result, getErr := cs.KubemartV1alpha1().Apps(targetNamespace).Get(context.Background(), *appName, v1.GetOptions{})
+		if getErr != nil {
+			return fmt.Errorf("failed to get latest version of app: %v", getErr)
+		}
+
+		result.Spec.Action = "update"
+		_, updateErr := cs.KubemartV1alpha1().Apps(targetNamespace).Update(context.Background(), result, v1.UpdateOptions{})
+		return updateErr
+	})
+	if retryErr != nil {
+		return fmt.Errorf("unable to update app - %v", retryErr)
 	}
 
 	fmt.Printf("%s app is now scheduled to be updated\n", *appName)
