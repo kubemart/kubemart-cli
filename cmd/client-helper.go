@@ -38,7 +38,7 @@ func NewClientFromLocalKubeConfig() (*kubemartclient.Clientset, error) {
 
 	clientset, err := kubemartclient.NewForConfig(restconfig)
 	if err != nil {
-		return &kubemartclient.Clientset{}, fmt.Errorf("unable to create k8s clientset - %v", err)
+		return &kubemartclient.Clientset{}, fmt.Errorf("unable to create kubemart clientset - %v", err)
 	}
 
 	return clientset, nil
